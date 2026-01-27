@@ -74,19 +74,21 @@ export async function registerRoutes(
       }`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3-flash-preview",
         contents: [{ role: "user", parts: [{ text: prompt }] }],
       });
 
-      // @ts-ignore - response.response.text() is the correct way to get text from Gemini result
-      const contentText = response.response.text();
+      const responseResult = await response.response;
+      const contentText = responseResult.text();
       // Remove markdown code blocks if present
       const jsonStr = contentText.replace(/```json\n?|\n?```/g, '').trim();
       const data = JSON.parse(jsonStr);
 
       // Save term
       const newTerm = await storage.createTerm({
-        ...data.term,
+        term: data.term.term,
+        definition: data.term.definition,
+        example: data.term.example,
         department
       });
 
@@ -144,13 +146,13 @@ export async function registerRoutes(
       4. funFact (a short educational fact about the answer)
       Format as a JSON array of objects.`;
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-5.1",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
       });
 
-      const content = response.choices[0].message.content;
+      const responseResult = await response.response;
+      const content = responseResult.text();
       if (!content) throw new Error("No response from AI");
       const questions = JSON.parse(content);
       
@@ -243,13 +245,13 @@ export async function registerRoutes(
       Format: JSON object with 'question', 'options' (array of 4 strings), and 'correctAnswer' (string, must be one of the options).
       Focus on terms like ARPU, Churn, 5G, KPI, etc.`;
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-5.1",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
       });
 
-      const content = response.choices[0].message.content;
+      const responseResult = await response.response;
+      const content = responseResult.text();
       if (!content) throw new Error("No response from AI");
       
       const result = JSON.parse(content);

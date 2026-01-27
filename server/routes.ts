@@ -45,11 +45,6 @@ export async function registerRoutes(
     try {
       const prompt = `A stylized game-like avatar for a telecom professional, professional yet creative, flat design style, high quality, suitable for a mobile game profile picture.`;
       
-      const response = await ai.getGenerativeModel({ model: "gemini-3-pro-image-preview" }).generateContent(prompt);
-      // Note: Replit AI integrations return base64 for images
-      const imageData = response.response.text(); // This is a simplification, actual integration uses internal client
-      
-      // Since we are using Gemini Emulation, we'll use the internal image integration logic
       const { generateImage } = await import("./replit_integrations/image/client");
       const avatarUrl = await generateImage(prompt);
       
@@ -67,7 +62,6 @@ export async function registerRoutes(
     
     try {
       const { topic = "telecom" } = req.body;
-      const model = ai.getGenerativeModel({ model: "gemini-3-flash-preview" });
       
       const prompt = `Generate a set of 5 fun, Kahoot-style multiple choice questions about ${topic}. 
       Make them engaging and educational. 
@@ -78,11 +72,15 @@ export async function registerRoutes(
       4. funFact (a short educational fact about the answer)
       Format as a JSON array of objects.`;
 
-      const result = await model.generateContent(prompt);
-      const content = result.response.text();
-      // Parse JSON from markdown if necessary
-      const jsonStr = content.replace(/```json|```/g, "").trim();
-      const questions = JSON.parse(jsonStr);
+      const response = await openai.chat.completions.create({
+        model: "gpt-5.1",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+      });
+
+      const content = response.choices[0].message.content;
+      if (!content) throw new Error("No response from AI");
+      const questions = JSON.parse(content);
       
       res.json(questions);
     } catch (error) {

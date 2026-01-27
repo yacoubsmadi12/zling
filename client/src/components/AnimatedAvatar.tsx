@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
-import { useVoiceStream } from "@/replit_integrations/audio";
 import { Button } from "@/components/ui/button";
-import { Volume2, VolumeX, Loader2 } from "lucide-react";
+import { Volume2, Loader2 } from "lucide-react";
 
 interface AvatarProps {
   department: string;
@@ -29,19 +28,7 @@ export function AnimatedAvatar({ department, textToSpeak, onSpeakEnd }: AvatarPr
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const { user } = useAuth();
   
-  const voiceStream = useVoiceStream({
-    onComplete: () => {
-      setIsSpeaking(false);
-      onSpeakEnd?.();
-    },
-    onError: (err) => {
-      console.error("TTS Error:", err);
-      setIsSpeaking(false);
-    }
-  });
-
   // Generate avatar if not already done
   useEffect(() => {
     async function getAvatar() {

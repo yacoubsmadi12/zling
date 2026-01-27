@@ -6,7 +6,11 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import OpenAI from "openai";
 import { Server as SocketIOServer } from "socket.io";
-import { User, insertLdapSettingsSchema, insertRewardSchema } from "@shared/schema";
+import { User, insertLdapSettingsSchema, insertRewardSchema, users } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
+import { registerImageRoutes } from "./replit_integrations/image";
+import { registerAudioRoutes } from "./replit_integrations/audio";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -28,6 +32,10 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   setupAuth(app);
+
+  // Register AI Integrations routes
+  registerImageRoutes(app);
+  registerAudioRoutes(app);
 
   // --- API Routes ---
 

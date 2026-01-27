@@ -31,6 +31,7 @@ export function AnimatedAvatar({ department, textToSpeak, onSpeakEnd }: AvatarPr
   
   // Generate avatar if not already done
   useEffect(() => {
+    let isMounted = true;
     async function getAvatar() {
       setIsGenerating(true);
       try {
@@ -40,17 +41,27 @@ export function AnimatedAvatar({ department, textToSpeak, onSpeakEnd }: AvatarPr
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ prompt: `3D stylized character: ${prompt}` })
         });
+        
+        if (!res.ok) throw new Error("Failed to generate image");
+        
         const data = await res.json();
-        if (data.b64_json) {
+        if (isMounted && data.b64_json) {
           setAvatarUrl(`data:image/png;base64,${data.b64_json}`);
         }
       } catch (err) {
         console.error("Avatar Gen Error:", err);
+        // Fallback to a generic icon or color if image generation fails
+        if (isMounted) {
+          setAvatarUrl(null);
+        }
       } finally {
-        setIsGenerating(false);
+        if (isMounted) {
+          setIsGenerating(false);
+        }
       }
     }
     getAvatar();
+    return () => { isMounted = false; };
   }, [department]);
 
   const handleSpeak = async () => {
@@ -110,7 +121,10 @@ export function AnimatedAvatar({ department, textToSpeak, onSpeakEnd }: AvatarPr
             transition={{ repeat: Infinity, duration: 0.5 }}
           />
         ) : (
-          <div className="text-xs text-center p-4">Avatar Loading...</div>
+          <div className="flex flex-col items-center justify-center p-4 text-center">
+            <div className="text-4xl mb-2 opacity-20">👤</div>
+            <div className="text-[10px] text-muted-foreground leading-tight">Avatar not available</div>
+          </div>
         )}
         
         {isSpeaking && (

@@ -19,14 +19,26 @@ const openai = new OpenAI({
 
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI(process.env.GEMINI_API_KEY_USER || process.env.AI_INTEGRATIONS_GEMINI_API_KEY || "dummy_key_for_lsp");
+// Lazy-initialize Gemini AI to avoid constructor errors during startup if keys are missing
+let aiInstance: GoogleGenAI | null = null;
 
-// Apply Replit AI Integrations settings if a user-provided key is not present
-if (process.env.AI_INTEGRATIONS_GEMINI_BASE_URL && !process.env.GEMINI_API_KEY_USER) {
-  (ai as any).httpOptions = {
-    apiVersion: "",
-    baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
-  };
+function getAi() {
+  if (!aiInstance) {
+    const key = process.env.GEMINI_API_KEY_USER || 
+                process.env.AI_INTEGRATIONS_GEMINI_API_KEY || 
+                "REQUIRED_FOR_CONSTRUCTOR";
+    
+    aiInstance = new GoogleGenAI(key);
+
+    // Apply Replit AI Integrations settings if using them
+    if (!process.env.GEMINI_API_KEY_USER && process.env.AI_INTEGRATIONS_GEMINI_BASE_URL) {
+      (aiInstance as any).httpOptions = {
+        apiVersion: "",
+        baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+      };
+    }
+  }
+  return aiInstance;
 }
 
 export async function registerRoutes(
@@ -75,8 +87,7 @@ export async function registerRoutes(
         ]
       }`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+      const response = await getAi().getGenerativeModel({ model: "gemini-1.5-flash" }).generateContent({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
       });
 
@@ -148,8 +159,7 @@ export async function registerRoutes(
       4. funFact (a short educational fact about the answer)
       Format as a JSON array of objects.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+      const response = await getAi().getGenerativeModel({ model: "gemini-1.5-flash" }).generateContent({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
       });
 
@@ -247,8 +257,7 @@ export async function registerRoutes(
       Format: JSON object with 'question', 'options' (array of 4 strings), and 'correctAnswer' (string, must be one of the options).
       Focus on terms like ARPU, Churn, 5G, KPI, etc.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+      const response = await getAi().getGenerativeModel({ model: "gemini-1.5-flash" }).generateContent({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
       });
 

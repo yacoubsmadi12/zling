@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, RotateCcw, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { AnimatedAvatar } from "@/components/AnimatedAvatar";
 
 export default function FlashcardsPage() {
   const { department } = useParams();
@@ -44,7 +45,7 @@ export default function FlashcardsPage() {
       <Navigation />
       
       <main className="flex-1 md:ml-64 p-4 md:p-8 flex flex-col h-screen md:h-auto overflow-hidden">
-        <div className="max-w-3xl mx-auto w-full flex-1 flex flex-col">
+        <div className="max-w-4xl mx-auto w-full flex-1 flex flex-col">
           
           <div className="flex items-center gap-4 mb-8">
             <Link href="/learn">
@@ -58,50 +59,60 @@ export default function FlashcardsPage() {
             </div>
           </div>
 
-          <div className="flex-1 flex items-center justify-center min-h-[400px] perspective-1000">
-            <motion.div
-              className="relative w-full max-w-lg aspect-[4/3] cursor-pointer group"
-              onClick={handleFlip}
-              initial={false}
-              animate={{ rotateY: isFlipped ? 180 : 0 }}
-              transition={{ duration: 0.6, type: "spring", stiffness: 260, damping: 20 }}
-              style={{ transformStyle: "preserve-3d" }}
-            >
-              {/* Front */}
-              <div className="absolute inset-0 backface-hidden bg-card border-2 border-border shadow-2xl rounded-3xl flex flex-col items-center justify-center p-8 text-center hover:border-primary/50 transition-colors">
-                <div className="text-xs font-bold tracking-widest text-muted-foreground uppercase mb-4">Term</div>
-                <h2 className="text-4xl font-bold text-primary break-words max-w-full">{currentTerm.term}</h2>
-                <p className="mt-8 text-sm text-muted-foreground">Tap to reveal definition</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center flex-1">
+            <div className="md:col-span-1 flex justify-center">
+              <AnimatedAvatar 
+                department={department || ""} 
+                textToSpeak={currentTerm ? (isFlipped ? currentTerm.definition : currentTerm.term) : ""} 
+              />
+            </div>
+
+            <div className="md:col-span-2 flex flex-col gap-8">
+              <div className="flex-1 flex items-center justify-center min-h-[300px] perspective-1000">
+                <motion.div
+                  className="relative w-full aspect-[4/3] cursor-pointer group"
+                  onClick={handleFlip}
+                  initial={false}
+                  animate={{ rotateY: isFlipped ? 180 : 0 }}
+                  transition={{ duration: 0.6, type: "spring", stiffness: 260, damping: 20 }}
+                  style={{ transformStyle: "preserve-3d" }}
+                >
+                  {/* Front */}
+                  <div className="absolute inset-0 backface-hidden bg-card border-2 border-border shadow-2xl rounded-3xl flex flex-col items-center justify-center p-8 text-center hover:border-primary/50 transition-colors">
+                    <div className="text-xs font-bold tracking-widest text-muted-foreground uppercase mb-4">Term</div>
+                    <h2 className="text-4xl font-bold text-primary break-words max-w-full">{currentTerm.term}</h2>
+                    <p className="mt-8 text-sm text-muted-foreground">Tap to reveal definition</p>
+                  </div>
+
+                  {/* Back */}
+                  <div className="absolute inset-0 backface-hidden bg-primary/5 border-2 border-primary shadow-2xl rounded-3xl flex flex-col items-center justify-center p-8 text-center rotate-y-180">
+                    <div className="text-xs font-bold tracking-widest text-primary uppercase mb-4">Definition</div>
+                    <p className="text-xl font-medium text-foreground mb-6 leading-relaxed">
+                      {currentTerm.definition}
+                    </p>
+                    <div className="bg-background/50 p-4 rounded-xl text-sm italic text-muted-foreground">
+                      "{currentTerm.example}"
+                    </div>
+                  </div>
+                </motion.div>
               </div>
 
-              {/* Back */}
-              <div className="absolute inset-0 backface-hidden bg-primary/5 border-2 border-primary shadow-2xl rounded-3xl flex flex-col items-center justify-center p-8 text-center rotate-y-180">
-                <div className="text-xs font-bold tracking-widest text-primary uppercase mb-4">Definition</div>
-                <p className="text-xl font-medium text-foreground mb-6 leading-relaxed">
-                  {currentTerm.definition}
-                </p>
-                <div className="bg-background/50 p-4 rounded-xl text-sm italic text-muted-foreground">
-                  "{currentTerm.example}"
-                </div>
+              {/* Controls */}
+              <div className="flex items-center justify-center gap-6">
+                <Button variant="outline" size="lg" onClick={handlePrev} className="rounded-full w-14 h-14 p-0 hover-elevate">
+                  <ChevronLeft className="w-6 h-6" />
+                </Button>
+                
+                <Button variant="ghost" size="lg" onClick={handleFlip} className="rounded-full w-14 h-14 p-0 bg-secondary/10 text-secondary hover:bg-secondary/20 hover-elevate">
+                  <RotateCcw className="w-6 h-6" />
+                </Button>
+
+                <Button variant="outline" size="lg" onClick={handleNext} className="rounded-full w-14 h-14 p-0 hover-elevate">
+                  <ChevronRight className="w-6 h-6" />
+                </Button>
               </div>
-            </motion.div>
+            </div>
           </div>
-
-          {/* Controls */}
-          <div className="flex items-center justify-center gap-6 mt-8">
-            <Button variant="outline" size="lg" onClick={handlePrev} className="rounded-full w-14 h-14 p-0">
-              <ChevronLeft className="w-6 h-6" />
-            </Button>
-            
-            <Button variant="ghost" size="lg" onClick={handleFlip} className="rounded-full w-14 h-14 p-0 bg-secondary/10 text-secondary hover:bg-secondary/20">
-              <RotateCcw className="w-6 h-6" />
-            </Button>
-
-            <Button variant="outline" size="lg" onClick={handleNext} className="rounded-full w-14 h-14 p-0">
-              <ChevronRight className="w-6 h-6" />
-            </Button>
-          </div>
-
         </div>
       </main>
     </div>

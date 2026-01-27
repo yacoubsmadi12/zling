@@ -193,6 +193,23 @@ export async function registerRoutes(
     }
   });
 
+  // --- TTS Route ---
+  app.post("/api/tts", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const { text } = req.body;
+      if (!text) return res.status(400).send("Text is required");
+      
+      const { textToSpeech } = await import("./replit_integrations/audio/client");
+      const audioBuffer = await textToSpeech(text);
+      res.set("Content-Type", "audio/wav");
+      res.send(audioBuffer);
+    } catch (err) {
+      console.error("TTS Error:", err);
+      res.status(500).send("Failed to generate speech");
+    }
+  });
+
   io.on("connection", (socket) => {
     console.log("New client connected", socket.id);
 

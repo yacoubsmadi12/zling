@@ -97,7 +97,7 @@ export default function Profile() {
           <Card className="border-none shadow-md">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Award className="w-6 h-6 text-orange-500" />
+                <Medal className="w-5 h-5 text-orange-500" />
                 Badges & Achievements
               </CardTitle>
             </CardHeader>

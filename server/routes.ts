@@ -37,6 +37,78 @@ export async function registerRoutes(
   registerImageRoutes(app);
   registerAudioRoutes(app);
 
+  // --- AI Daily Content Generation ---
+
+  app.get("/api/ai/daily-content", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    
+    try {
+      const user = req.user as User;
+      const department = user.department;
+      const today = new Date().toISOString().split('T')[0];
+
+      // Check if content already exists for today
+      const existingContent = await storage.getDailyContent(department, today);
+      if (existingContent) {
+        const term = (await storage.getTerms()).find(t => t.id === existingContent.termId);
+        return res.json({
+          term,
+          quiz: existingContent.quizData
+        });
+      }
+
+      // Generate new content using Gemini
+      const prompt = `You are an expert in the ${department} department of a telecom operator. 
+      1. Generate a "Word of the Day" for this department. It should be a technical or professional term.
+      Provide the 'term', 'definition', and a 'example' sentence.
+      2. Generate a set of 5 fun, Kahoot-style multiple choice questions about this term and related topics in ${department}. 
+      For each question, provide: 'question', 'options' (array of 4), 'correctAnswer' (one of options), and 'funFact'.
+      
+      Format your response as a JSON object:
+      {
+        "term": { "term": "...", "definition": "...", "example": "..." },
+        "quiz": [
+          { "question": "...", "options": ["...", "...", "...", "..."], "correctAnswer": "...", "funFact": "..." },
+          ...
+        ]
+      }`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+      });
+
+      // @ts-ignore - response.response.text() is the correct way to get text from Gemini result
+      const contentText = response.response.text();
+      // Remove markdown code blocks if present
+      const jsonStr = contentText.replace(/```json\n?|\n?```/g, '').trim();
+      const data = JSON.parse(jsonStr);
+
+      // Save term
+      const newTerm = await storage.createTerm({
+        ...data.term,
+        department
+      });
+
+      // Save daily content record
+      await storage.createDailyContent({
+        department,
+        date: today,
+        termId: newTerm.id,
+        quizData: data.quiz
+      });
+
+      res.json({
+        term: newTerm,
+        quiz: data.quiz
+      });
+
+    } catch (error) {
+      console.error("Daily Content Gen Error:", error);
+      res.status(500).json({ message: "Failed to generate daily content" });
+    }
+  });
+
   // --- API Routes ---
 
   // Generate Avatar

@@ -1,6 +1,6 @@
 import { db } from "./db";
-import { users, terms, quizzes, badges, userBadges, ldapSettings, rewards, userRewards, type User, type InsertUser, type Term, type InsertTerm, type Quiz, type InsertQuiz, type Badge, type InsertBadge, type UserBadge, type LdapSettings, type InsertLdapSettings, type Reward, type InsertReward, type UserReward } from "@shared/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { users, terms, quizzes, badges, userBadges, ldapSettings, rewards, userRewards, dailyContent, type User, type InsertUser, type Term, type InsertTerm, type Quiz, type InsertQuiz, type Badge, type InsertBadge, type UserBadge, type LdapSettings, type InsertLdapSettings, type Reward, type InsertReward, type UserReward } from "@shared/schema";
+import { eq, desc, sql, and } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -22,6 +22,10 @@ export interface IStorage {
   // Quizzes
   createQuiz(quiz: InsertQuiz): Promise<Quiz>;
   getQuizHistory(userId: number): Promise<Quiz[]>;
+
+  // Daily Content
+  getDailyContent(department: string, date: string): Promise<typeof dailyContent.$inferSelect | undefined>;
+  createDailyContent(content: { department: string; date: string; termId: number; quizData: any }): Promise<typeof dailyContent.$inferSelect>;
 
   // Leaderboard
   getLeaderboard(): Promise<User[]>;
@@ -121,6 +125,22 @@ export class DatabaseStorage implements IStorage {
 
   async getQuizHistory(userId: number): Promise<Quiz[]> {
     return db.select().from(quizzes).where(eq(quizzes.userId, userId)).orderBy(desc(quizzes.date));
+  }
+
+  // Daily Content
+  async getDailyContent(department: string, date: string) {
+    const [content] = await db.select().from(dailyContent).where(
+      and(
+        eq(dailyContent.department, department),
+        eq(dailyContent.date, date)
+      )
+    );
+    return content;
+  }
+
+  async createDailyContent(content: { department: string; date: string; termId: number; quizData: any }) {
+    const [newContent] = await db.insert(dailyContent).values(content).returning();
+    return newContent;
   }
 
   // Leaderboard

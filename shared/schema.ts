@@ -75,6 +75,14 @@ export const userBadges = pgTable("user_badges", {
   earnedAt: timestamp("earned_at").defaultNow(),
 });
 
+export const dailyContent = pgTable("daily_content", {
+  id: serial("id").primaryKey(),
+  department: text("department").notNull(),
+  date: text("date").notNull(), // YYYY-MM-DD
+  termId: integer("term_id").notNull(),
+  quizData: jsonb("quiz_data").notNull(), // Array of 5 questions
+});
+
 // Relations
 export const userRelations = relations(users, ({ many }) => ({
   quizzes: many(quizzes),

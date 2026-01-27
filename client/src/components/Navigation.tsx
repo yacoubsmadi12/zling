@@ -1,11 +1,11 @@
 import { Link, useLocation } from "wouter";
-import { Home, BookOpen, Trophy, User, LogOut, Sword } from "lucide-react";
+import { Home, BookOpen, Trophy, User, LogOut, Sword, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
 export function Navigation() {
   const [location] = useLocation();
-  const { logoutMutation } = useAuth();
+  const { user, logoutMutation } = useAuth();
 
   const navItems = [
     { href: "/", icon: Home, label: "Home" },
@@ -14,6 +14,10 @@ export function Navigation() {
     { href: "/leaderboard", icon: Trophy, label: "Ranks" },
     { href: "/profile", icon: User, label: "Profile" },
   ];
+
+  if (user?.role === "admin") {
+    navItems.push({ href: "/admin", icon: Shield, label: "Admin" });
+  }
 
   return (
     <>

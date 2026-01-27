@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, terms, quizzes, badges, userBadges, type User, type InsertUser, type Term, type InsertTerm, type Quiz, type InsertQuiz, type Badge, type InsertBadge, type UserBadge } from "@shared/schema";
+import { users, terms, quizzes, badges, userBadges, ldapSettings, rewards, userRewards, type User, type InsertUser, type Term, type InsertTerm, type Quiz, type InsertQuiz, type Badge, type InsertBadge, type UserBadge, type LdapSettings, type InsertLdapSettings, type Reward, type InsertReward, type UserReward } from "@shared/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";

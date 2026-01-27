@@ -1,7 +1,7 @@
 import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 export * from "./models/chat"; // Export chat schema for integration
 
@@ -40,6 +40,37 @@ export const userRewards = pgTable("user_rewards", {
   awardedAt: timestamp("awarded_at").defaultNow(),
 });
 
+export const terms = pgTable("terms", {
+  id: serial("id").primaryKey(),
+  term: text("term").notNull(),
+  definition: text("definition").notNull(),
+  example: text("example").notNull(),
+  department: text("department").notNull(),
+});
+
+export const quizzes = pgTable("quizzes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(), 
+  type: text("type").notNull(), 
+  score: integer("score").notNull(),
+  date: timestamp("date").defaultNow(),
+});
+
+export const badges = pgTable("badges", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  icon: text("icon").notNull(), 
+  condition: text("condition").notNull(), 
+});
+
+export const userBadges = pgTable("user_badges", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  badgeId: integer("badge_id").notNull(),
+  earnedAt: timestamp("earned_at").defaultNow(),
+});
+
 // Relations
 export const userRelations = relations(users, ({ many }) => ({
   quizzes: many(quizzes),
@@ -62,36 +93,20 @@ export const userRewardsRelations = relations(userRewards, ({ one }) => ({
   }),
 }));
 
-export const terms = pgTable("terms", {
-  id: serial("id").primaryKey(),
-  term: text("term").notNull(),
-  definition: text("definition").notNull(),
-  example: text("example").notNull(),
-  department: text("department").notNull(),
-});
+export const badgeRelations = relations(badges, ({ many }) => ({
+  users: many(userBadges),
+}));
 
-export const quizzes = pgTable("quizzes", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(), // Creator or user who took it? Let's track history
-  type: text("type").notNull(), // daily, duel, scenario, emoji
-  score: integer("score").notNull(),
-  date: timestamp("date").defaultNow(),
-});
-
-export const badges = pgTable("badges", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  description: text("description").notNull(),
-  icon: text("icon").notNull(), // Lucid icon name
-  condition: text("condition").notNull(), // e.g., "streak:7"
-});
-
-export const userBadges = pgTable("user_badges", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
-  badgeId: integer("badge_id").notNull(),
-  earnedAt: timestamp("earned_at").defaultNow(),
-});
+export const userBadgesRelations = relations(userBadges, ({ one }) => ({
+  user: one(users, {
+    fields: [userBadges.userId],
+    references: [users.id],
+  }),
+  badge: one(badges, {
+    fields: [userBadges.badgeId],
+    references: [badges.id],
+  }),
+}));
 
 // Zod Schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, points: true, streak: true, lastLoginDate: true, role: true });

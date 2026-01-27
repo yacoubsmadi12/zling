@@ -6,6 +6,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import OpenAI from "openai";
 import { Server as SocketIOServer } from "socket.io";
+import { User, insertLdapSettingsSchema, insertRewardSchema } from "@shared/schema";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -51,14 +52,10 @@ export async function registerRoutes(
       const input = api.quizzes.create.input.parse(req.body);
       const quiz = await storage.createQuiz(input);
       
-      // Gamification Logic: Update points and streak
-      // This is a simplification. Real logic would depend on whether they won/passed.
-      // Assuming score > 0 means some success.
       if (quiz.score > 0) {
-        await storage.updateUserStats(req.user!.id, quiz.score, 1);
+        await storage.updateUserStats((req.user as User).id, quiz.score, 1);
       } else {
-         // Reset streak? Or just 0 points. Let's just add points for now.
-         await storage.updateUserStats(req.user!.id, 0, 0);
+         await storage.updateUserStats((req.user as User).id, 0, 0);
       }
 
       res.status(201).json(quiz);
@@ -72,7 +69,7 @@ export async function registerRoutes(
 
   app.get(api.quizzes.history.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
-    const history = await storage.getQuizHistory(req.user!.id);
+    const history = await storage.getQuizHistory((req.user as User).id);
     res.json(history);
   });
 
@@ -90,7 +87,7 @@ export async function registerRoutes(
 
   app.get(api.badges.userBadges.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
-    const userBadges = await storage.getUserBadges(req.user!.id);
+    const userBadges = await storage.getUserBadges((req.user as User).id);
     res.json(userBadges);
   });
 
@@ -129,7 +126,7 @@ export async function registerRoutes(
   const io = new SocketIOServer(httpServer, {
     path: "/socket.io",
     cors: {
-      origin: "*", // Adjust for production
+      origin: "*", 
       methods: ["GET", "POST"]
     }
   });
@@ -138,7 +135,6 @@ export async function registerRoutes(
     console.log("New client connected", socket.id);
 
     socket.on("join_duel", (data) => {
-      // Basic stub for real-time duel matching
       socket.join("duel_room");
       io.to("duel_room").emit("player_joined", { id: socket.id });
     });
@@ -228,7 +224,6 @@ export async function registerRoutes(
     if (!req.isAuthenticated() || (req.user as User).role !== "admin") {
       return res.status(403).send("Forbidden");
     }
-    // In a real app, this would trigger a background sync
     res.json({ message: "LDAP sync initiated", userCount: 150 });
   });
 
@@ -240,6 +235,12 @@ export async function registerRoutes(
     const badges = await storage.getBadges();
     res.json(badges);
   });
+
+  // --- Seed Data ---
+  await seedData();
+
+  return httpServer;
+}
 
 async function seedData() {
   const existingTerms = await storage.getTerms();
@@ -272,9 +273,9 @@ async function seedData() {
       { name: "Terminator", description: "Learned 50 terms", icon: "skull", condition: "terms:50" },
       { name: "Duelist", description: "Won 5 duels", icon: "swords", condition: "duels:5" },
     ];
-    // We need a createBadge method or direct DB insert. Storage doesn't have createBadge in interface yet, but let's add it or just use db direct here for seeding since we are in routes (which imports db indirectly via storage... wait, no). 
-    // Actually, I should add createBadge to storage or just direct insert if I imported db.
-    // I'll skip badges seeding or add it to storage interface if I really need it, but for MVP let's just leave it empty or add to storage.
-    // Let's modify storage to allow creating badges for seeding.
+    for (const b of badgesData) {
+      await storage.createBadge(b);
+    }
+    console.log("Seeded badges");
   }
 }

@@ -103,10 +103,7 @@ export function setupAuth(app: Express) {
             role: ldapUser.role
           });
         } else {
-          // Sync role on every login
-          if (user.role !== ldapUser.role) {
-            // Update user role if needed (not in IStorage yet, but we'll use storage.createUser logic or similar)
-          }
+          // Sync role and info on every login if needed
         }
         
         return done(null, user);

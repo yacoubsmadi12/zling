@@ -38,7 +38,7 @@ function Router() {
   );
 }
 
-function App() {
+export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -50,5 +50,3 @@ function App() {
     </QueryClientProvider>
   );
 }
-
-export default App;

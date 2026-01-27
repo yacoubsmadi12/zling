@@ -12,7 +12,7 @@ import { motion } from "framer-motion";
 import heroImg from "@assets/hero_bg.jpg"; // Placeholder asset reference
 
 export default function AuthPage() {
-  const { loginMutation, registerMutation, user } = useAuth();
+  const { loginMutation, user } = useAuth();
   const [, setLocation] = useLocation();
 
   if (user) {

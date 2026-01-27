@@ -19,13 +19,15 @@ const openai = new OpenAI({
 
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
-  httpOptions: {
+const ai = new GoogleGenAI(process.env.GEMINI_API_KEY_USER || process.env.AI_INTEGRATIONS_GEMINI_API_KEY || "dummy_key_for_lsp");
+
+// Apply Replit AI Integrations settings if a user-provided key is not present
+if (process.env.AI_INTEGRATIONS_GEMINI_BASE_URL && !process.env.GEMINI_API_KEY_USER) {
+  (ai as any).httpOptions = {
     apiVersion: "",
     baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
-  },
-});
+  };
+}
 
 export async function registerRoutes(
   httpServer: Server,

@@ -24,21 +24,34 @@ let aiInstance: GoogleGenAI | null = null;
 
 function getAi() {
   if (!aiInstance) {
-    const key = process.env.GEMINI_API_KEY_USER || 
+    const key = process.env.GOOGLE_API_KEY || 
                 process.env.AI_INTEGRATIONS_GEMINI_API_KEY || 
                 "REQUIRED_FOR_CONSTRUCTOR";
     
-    aiInstance = new GoogleGenAI(key);
+    const options: { apiKey: string; httpOptions?: { apiVersion: string; baseUrl: string } } = {
+      apiKey: key,
+    };
 
     // Apply Replit AI Integrations settings if using them
-    if (!process.env.GEMINI_API_KEY_USER && process.env.AI_INTEGRATIONS_GEMINI_BASE_URL) {
-      (aiInstance as any).httpOptions = {
+    if (!process.env.GOOGLE_API_KEY && process.env.AI_INTEGRATIONS_GEMINI_BASE_URL) {
+      options.httpOptions = {
         apiVersion: "",
         baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
       };
     }
+    
+    aiInstance = new GoogleGenAI(options);
   }
   return aiInstance;
+}
+
+async function generateContent(prompt: string): Promise<string> {
+  const ai = getAi();
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: prompt,
+  });
+  return response.text || "";
 }
 
 export async function registerRoutes(
@@ -87,12 +100,7 @@ export async function registerRoutes(
         ]
       }`;
 
-      const response = await getAi().getGenerativeModel({ model: "gemini-1.5-flash" }).generateContent({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-      });
-
-      const responseResult = await response.response;
-      const contentText = responseResult.text();
+      const contentText = await generateContent(prompt);
       // Remove markdown code blocks if present
       const jsonStr = contentText.replace(/```json\n?|\n?```/g, '').trim();
       const data = JSON.parse(jsonStr);
@@ -159,14 +167,10 @@ export async function registerRoutes(
       4. funFact (a short educational fact about the answer)
       Format as a JSON array of objects.`;
 
-      const response = await getAi().getGenerativeModel({ model: "gemini-1.5-flash" }).generateContent({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-      });
-
-      const responseResult = await response.response;
-      const content = responseResult.text();
+      const content = await generateContent(prompt);
       if (!content) throw new Error("No response from AI");
-      const questions = JSON.parse(content);
+      const jsonStr = content.replace(/```json\n?|\n?```/g, '').trim();
+      const questions = JSON.parse(jsonStr);
       
       res.json(questions);
     } catch (error) {
@@ -257,15 +261,11 @@ export async function registerRoutes(
       Format: JSON object with 'question', 'options' (array of 4 strings), and 'correctAnswer' (string, must be one of the options).
       Focus on terms like ARPU, Churn, 5G, KPI, etc.`;
 
-      const response = await getAi().getGenerativeModel({ model: "gemini-1.5-flash" }).generateContent({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-      });
-
-      const responseResult = await response.response;
-      const content = responseResult.text();
+      const content = await generateContent(prompt);
       if (!content) throw new Error("No response from AI");
       
-      const result = JSON.parse(content);
+      const jsonStr = content.replace(/```json\n?|\n?```/g, '').trim();
+      const result = JSON.parse(jsonStr);
       res.json(result);
 
     } catch (error) {

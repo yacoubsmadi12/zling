@@ -305,6 +305,32 @@ export async function registerRoutes(
 }
 
 async function seedData() {
+  const existingAdmin = await storage.getUserByUsername("admin");
+  if (!existingAdmin) {
+    await storage.createUser({
+      username: "admin",
+      password: "admin_password",
+      fullName: "Admin User",
+      email: "admin@example.com",
+      department: "Governance, Risk, and Compliance",
+      role: "admin"
+    });
+    console.log("Seeded admin user");
+  }
+
+  const existingEmployee = await storage.getUserByUsername("employee1");
+  if (!existingEmployee) {
+    await storage.createUser({
+      username: "employee1",
+      password: "employee_password",
+      fullName: "Regular Employee",
+      email: "employee@example.com",
+      department: "Engineering",
+      role: "employee"
+    });
+    console.log("Seeded employee user");
+  }
+
   const existingTerms = await storage.getTerms();
   if (existingTerms.length === 0) {
     const termsData = [

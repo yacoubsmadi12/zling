@@ -1,0 +1,197 @@
+import { useState, useEffect } from "react";
+import { useParams, Link } from "wouter";
+import { useAiDuel, useSubmitQuiz } from "@/hooks/use-quizzes";
+import { Navigation } from "@/components/Navigation";
+import { Loader } from "@/components/Loader";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { useToast } from "@/hooks/use-toast";
+import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
+import { CheckCircle2, XCircle, ArrowRight, Trophy } from "lucide-react";
+
+export default function QuizRunner() {
+  const { mode } = useParams(); // 'ai-duel' or 'daily'
+  const { mutateAsync: fetchQuestion, isPending: isLoadingQuestion } = useAiDuel();
+  const { mutate: submitResult } = useSubmitQuiz();
+  const { toast } = useToast();
+
+  const [currentQuestion, setCurrentQuestion] = useState<any>(null);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  const [score, setScore] = useState(0);
+  const [questionCount, setQuestionCount] = useState(0);
+  const [gameOver, setGameOver] = useState(false);
+
+  // Load initial question
+  useEffect(() => {
+    loadNewQuestion();
+  }, []);
+
+  const loadNewQuestion = async () => {
+    try {
+      // In a real app, 'daily' might fetch from a different endpoint
+      const q = await fetchQuestion({ 
+        difficulty: "medium", 
+        topic: mode === 'daily' ? "general telecom" : undefined 
+      });
+      setCurrentQuestion(q);
+      setSelectedOption(null);
+      setIsCorrect(null);
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to load question", variant: "destructive" });
+    }
+  };
+
+  const handleAnswer = (option: string) => {
+    if (selectedOption) return; // Prevent double clicks
+    
+    setSelectedOption(option);
+    const correct = option === currentQuestion.correctAnswer;
+    setIsCorrect(correct);
+
+    if (correct) {
+      setScore(s => s + 10);
+      confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
+    }
+
+    // Auto advance after delay
+    setTimeout(() => {
+      if (questionCount >= 4) { // End after 5 questions (0-4)
+        finishGame(score + (correct ? 10 : 0));
+      } else {
+        setQuestionCount(c => c + 1);
+        loadNewQuestion();
+      }
+    }, 2000);
+  };
+
+  const finishGame = (finalScore: number) => {
+    setGameOver(true);
+    submitResult({
+      type: mode || 'unknown',
+      score: finalScore,
+      userId: 0, // Backend handles user ID from session
+    });
+    if (finalScore >= 40) {
+      confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 } });
+    }
+  };
+
+  if (gameOver) {
+    return (
+      <div className="flex min-h-screen bg-background items-center justify-center p-4">
+        <motion.div 
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-card w-full max-w-md p-8 rounded-3xl shadow-2xl text-center border-2 border-primary/10"
+        >
+          <div className="w-24 h-24 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Trophy className="w-12 h-12 text-yellow-600" />
+          </div>
+          <h2 className="text-3xl font-display font-bold mb-2">Quiz Complete!</h2>
+          <p className="text-muted-foreground mb-8">You scored</p>
+          <div className="text-6xl font-bold text-primary mb-8">{score}</div>
+          
+          <div className="space-y-4">
+            <Link href="/quiz">
+              <Button className="w-full py-6 text-lg rounded-xl">Play Again</Button>
+            </Link>
+            <Link href="/dashboard">
+              <Button variant="outline" className="w-full py-6 text-lg rounded-xl">Back to Dashboard</Button>
+            </Link>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen bg-background pb-20 md:pb-0">
+      <Navigation />
+      
+      <main className="flex-1 md:ml-64 p-4 md:p-8 flex flex-col items-center justify-center min-h-[80vh]">
+        <div className="max-w-2xl w-full space-y-8">
+          
+          {/* Progress Header */}
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col">
+              <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Question {questionCount + 1}/5</span>
+              <h1 className="text-xl font-bold capitalize">{mode?.replace('-', ' ')}</h1>
+            </div>
+            <div className="bg-primary/10 text-primary px-4 py-2 rounded-lg font-bold">
+              {score} pts
+            </div>
+          </div>
+
+          <Progress value={(questionCount / 5) * 100} className="h-2" />
+
+          {/* Question Card */}
+          <AnimatePresence mode="wait">
+            {isLoadingQuestion || !currentQuestion ? (
+              <div className="h-64 flex items-center justify-center">
+                <Loader />
+              </div>
+            ) : (
+              <motion.div
+                key={questionCount}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-8"
+              >
+                <div className="bg-card p-8 rounded-3xl shadow-lg border">
+                  <h2 className="text-2xl font-medium leading-relaxed text-center">
+                    {currentQuestion.question}
+                  </h2>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                  {currentQuestion.options.map((option: string, idx: number) => {
+                    const isSelected = selectedOption === option;
+                    const isCorrectAnswer = option === currentQuestion.correctAnswer;
+                    
+                    let buttonStyle = "bg-card hover:bg-muted border-2 border-transparent";
+                    if (selectedOption) {
+                      if (isSelected) {
+                        buttonStyle = isCorrect 
+                          ? "bg-green-100 border-green-500 text-green-800"
+                          : "bg-red-100 border-red-500 text-red-800";
+                      } else if (isCorrectAnswer) {
+                        buttonStyle = "bg-green-50 border-green-200 text-green-700";
+                      } else {
+                        buttonStyle = "opacity-50 grayscale";
+                      }
+                    }
+
+                    return (
+                      <motion.button
+                        key={idx}
+                        whileHover={!selectedOption ? { scale: 1.02 } : {}}
+                        whileTap={!selectedOption ? { scale: 0.98 } : {}}
+                        onClick={() => handleAnswer(option)}
+                        disabled={!!selectedOption}
+                        className={`
+                          p-6 rounded-2xl text-left font-medium text-lg transition-all duration-200 shadow-sm
+                          flex items-center justify-between
+                          ${buttonStyle}
+                        `}
+                      >
+                        <span>{option}</span>
+                        {selectedOption && isSelected && (
+                          isCorrect 
+                            ? <CheckCircle2 className="w-6 h-6 text-green-600" />
+                            : <XCircle className="w-6 h-6 text-red-600" />
+                        )}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </main>
+    </div>
+  );
+}

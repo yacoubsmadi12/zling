@@ -13,6 +13,16 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
+import { GoogleGenAI } from "@google/genai";
+
+const ai = new GoogleGenAI({
+  apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+  httpOptions: {
+    apiVersion: "",
+    baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+  },
+});
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -20,6 +30,58 @@ export async function registerRoutes(
   setupAuth(app);
 
   // --- API Routes ---
+
+  // Generate Avatar
+  app.post("/api/user/generate-avatar", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const prompt = `A stylized game-like avatar for a telecom professional, professional yet creative, flat design style, high quality, suitable for a mobile game profile picture.`;
+      
+      const response = await ai.getGenerativeModel({ model: "gemini-3-pro-image-preview" }).generateContent(prompt);
+      // Note: Replit AI integrations return base64 for images
+      const imageData = response.response.text(); // This is a simplification, actual integration uses internal client
+      
+      // Since we are using Gemini Emulation, we'll use the internal image integration logic
+      const { generateImage } = await import("./replit_integrations/image/client");
+      const avatarUrl = await generateImage(prompt);
+      
+      await db.update(users).set({ avatarUrl }).where(eq(users.id, (req.user as User).id));
+      res.json({ avatarUrl });
+    } catch (err) {
+      console.error("Avatar Gen Error:", err);
+      res.status(500).json({ message: "Failed to generate avatar" });
+    }
+  });
+
+  // Kahoot-style Quiz Generation (Gemini Emulation)
+  app.post("/api/ai/quiz-game", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    
+    try {
+      const { topic = "telecom" } = req.body;
+      const model = ai.getGenerativeModel({ model: "gemini-3-flash-preview" });
+      
+      const prompt = `Generate a set of 5 fun, Kahoot-style multiple choice questions about ${topic}. 
+      Make them engaging and educational. 
+      For each question, provide:
+      1. question
+      2. options (array of 4)
+      3. correctAnswer (one of the options)
+      4. funFact (a short educational fact about the answer)
+      Format as a JSON array of objects.`;
+
+      const result = await model.generateContent(prompt);
+      const content = result.response.text();
+      // Parse JSON from markdown if necessary
+      const jsonStr = content.replace(/```json|```/g, "").trim();
+      const questions = JSON.parse(jsonStr);
+      
+      res.json(questions);
+    } catch (error) {
+      console.error("Quiz Game Gen Error:", error);
+      res.status(500).json({ message: "Failed to generate game quiz" });
+    }
+  });
 
   // Terms
   app.get(api.terms.list.path, async (req, res) => {

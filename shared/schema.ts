@@ -16,6 +16,9 @@ export const users = pgTable("users", {
   streak: integer("streak").default(0).notNull(),
   lastLoginDate: timestamp("last_login_date").defaultNow(),
   role: text("role").default("employee").notNull(), // employee or admin
+  avatarUrl: text("avatar_url"),
+  wordsLearned: integer("words_learned").default(0).notNull(),
+  avgQuizScore: integer("avg_quiz_score").default(0).notNull(),
 });
 
 export const ldapSettings = pgTable("ldap_settings", {

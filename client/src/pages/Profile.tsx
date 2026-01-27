@@ -5,11 +5,34 @@ import { Loader } from "@/components/Loader";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Mail, Building, Award } from "lucide-react";
+import { Calendar, Mail, Building, Award, Sparkles } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 
 export default function Profile() {
   const { user } = useAuth();
   const { data: badges, isLoading } = useUserBadges();
+  const { toast } = useToast();
+
+  const generateAvatarMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/user/generate-avatar");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      toast({ title: "Success", description: "New avatar generated!" });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to generate avatar", 
+        variant: "destructive" 
+      });
+    },
+  });
 
   if (!user) return null;
 
@@ -25,10 +48,25 @@ export default function Profile() {
             <div className="h-32 bg-gradient-to-r from-primary to-secondary opacity-90" />
             <div className="px-8 pb-8">
               <div className="relative -mt-16 mb-6 flex justify-between items-end">
-                <Avatar className="w-32 h-32 border-4 border-card shadow-xl">
-                  <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`} />
-                  <AvatarFallback className="text-4xl">{user.username[0]}</AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <Avatar className="w-32 h-32 border-4 border-card shadow-xl">
+                    <AvatarImage src={user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`} />
+                    <AvatarFallback className="text-4xl">{user.username[0]}</AvatarFallback>
+                  </Avatar>
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    className="absolute -bottom-2 -right-2 rounded-full shadow-lg h-10 w-10 border-2 border-background"
+                    onClick={() => generateAvatarMutation.mutate()}
+                    disabled={generateAvatarMutation.isPending}
+                  >
+                    {generateAvatarMutation.isPending ? (
+                      <Loader className="w-4 h-4" />
+                    ) : (
+                      <Sparkles className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
                 <div className="flex gap-2 mb-2">
                   <Badge variant="secondary" className="px-3 py-1 text-sm bg-primary/10 text-primary hover:bg-primary/20">
                     Level {Math.floor(user.points / 1000) + 1}

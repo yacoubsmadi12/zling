@@ -22,6 +22,24 @@ export default function QuizRunner() {
   const [score, setScore] = useState(0);
   const [questionCount, setQuestionCount] = useState(0);
   const [gameOver, setGameOver] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(15);
+  const [isPaused, setIsPaused] = useState(false);
+
+  // Timer logic
+  useEffect(() => {
+    if (gameOver || !currentQuestion || isPaused || selectedOption) return;
+
+    if (timeLeft <= 0) {
+      handleAnswer(""); // Time's up
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft, gameOver, currentQuestion, isPaused, selectedOption]);
 
   // Load initial question
   useEffect(() => {
@@ -30,7 +48,6 @@ export default function QuizRunner() {
 
   const loadNewQuestion = async () => {
     try {
-      // In a real app, 'daily' might fetch from a different endpoint
       const q = await fetchQuestion({ 
         difficulty: "medium", 
         topic: mode === 'daily' ? "general telecom" : undefined 
@@ -38,32 +55,38 @@ export default function QuizRunner() {
       setCurrentQuestion(q);
       setSelectedOption(null);
       setIsCorrect(null);
+      setTimeLeft(15);
     } catch (err) {
       toast({ title: "Error", description: "Failed to load question", variant: "destructive" });
     }
   };
 
   const handleAnswer = (option: string) => {
-    if (selectedOption) return; // Prevent double clicks
+    if (selectedOption) return;
     
     setSelectedOption(option);
     const correct = option === currentQuestion.correctAnswer;
     setIsCorrect(correct);
 
     if (correct) {
-      setScore(s => s + 10);
-      confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
+      const timeBonus = Math.floor(timeLeft * 2);
+      setScore(s => s + 10 + timeBonus);
+      confetti({ 
+        particleCount: 100, 
+        spread: 70, 
+        origin: { y: 0.6 },
+        colors: ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF']
+      });
     }
 
-    // Auto advance after delay
     setTimeout(() => {
-      if (questionCount >= 4) { // End after 5 questions (0-4)
+      if (questionCount >= 4) {
         finishGame(score + (correct ? 10 : 0));
       } else {
         setQuestionCount(c => c + 1);
         loadNewQuestion();
       }
-    }, 2000);
+    }, 2500);
   };
 
   const finishGame = (finalScore: number) => {
@@ -119,8 +142,13 @@ export default function QuizRunner() {
               <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Question {questionCount + 1}/5</span>
               <h1 className="text-xl font-bold capitalize">{mode?.replace('-', ' ')}</h1>
             </div>
-            <div className="bg-primary/10 text-primary px-4 py-2 rounded-lg font-bold">
-              {score} pts
+            <div className="flex items-center gap-4">
+              <div className={`w-12 h-12 rounded-full border-4 flex items-center justify-center font-bold text-xl ${timeLeft < 5 ? 'border-red-500 text-red-500 animate-pulse' : 'border-primary text-primary'}`}>
+                {timeLeft}
+              </div>
+              <div className="bg-primary/10 text-primary px-4 py-2 rounded-lg font-bold">
+                {score} pts
+              </div>
             </div>
           </div>
 
@@ -135,58 +163,85 @@ export default function QuizRunner() {
             ) : (
               <motion.div
                 key={questionCount}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.05 }}
                 className="space-y-8"
               >
-                <div className="bg-card p-8 rounded-3xl shadow-lg border">
-                  <h2 className="text-2xl font-medium leading-relaxed text-center">
+                <div className="bg-card p-10 rounded-3xl shadow-xl border-b-8 border-primary/20">
+                  <h2 className="text-3xl font-bold leading-relaxed text-center font-display">
                     {currentQuestion.question}
                   </h2>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {currentQuestion.options.map((option: string, idx: number) => {
                     const isSelected = selectedOption === option;
                     const isCorrectAnswer = option === currentQuestion.correctAnswer;
-                    
-                    let buttonStyle = "bg-card hover:bg-muted border-2 border-transparent";
+                    const colors = ["bg-blue-500", "bg-red-500", "bg-yellow-500", "bg-green-500"];
+                    const icons = [
+                      <div key="1" className="w-6 h-6 border-2 border-white rotate-45" />,
+                      <div key="2" className="w-6 h-6 border-2 border-white rounded-full" />,
+                      <div key="3" className="w-6 h-6 border-2 border-white" />,
+                      <div key="4" className="w-6 h-6 border-2 border-white rounded-sm skew-x-12" />
+                    ];
+
+                    let buttonStyle = `${colors[idx]} text-white hover:brightness-110 shadow-lg translate-y-0`;
                     if (selectedOption) {
                       if (isSelected) {
                         buttonStyle = isCorrect 
-                          ? "bg-green-100 border-green-500 text-green-800"
-                          : "bg-red-100 border-red-500 text-red-800";
+                          ? "bg-green-600 ring-4 ring-green-400 scale-105 z-10"
+                          : "bg-red-600 opacity-100 scale-95 grayscale-0";
                       } else if (isCorrectAnswer) {
-                        buttonStyle = "bg-green-50 border-green-200 text-green-700";
+                        buttonStyle = "bg-green-600 scale-105 z-10";
                       } else {
-                        buttonStyle = "opacity-50 grayscale";
+                        buttonStyle = "opacity-20 scale-90 grayscale";
                       }
                     }
 
                     return (
                       <motion.button
                         key={idx}
-                        whileHover={!selectedOption ? { scale: 1.02 } : {}}
+                        whileHover={!selectedOption ? { scale: 1.02, translateY: -4 } : {}}
                         whileTap={!selectedOption ? { scale: 0.98 } : {}}
                         onClick={() => handleAnswer(option)}
                         disabled={!!selectedOption}
                         className={`
-                          p-6 rounded-2xl text-left font-medium text-lg transition-all duration-200 shadow-sm
-                          flex items-center justify-between
+                          p-8 rounded-2xl text-left font-bold text-xl transition-all duration-300
+                          flex items-center gap-4 relative overflow-hidden
                           ${buttonStyle}
                         `}
                       >
-                        <span>{option}</span>
+                        <div className="flex-shrink-0 opacity-50">
+                          {icons[idx]}
+                        </div>
+                        <span className="flex-1">{option}</span>
                         {selectedOption && isSelected && (
-                          isCorrect 
-                            ? <CheckCircle2 className="w-6 h-6 text-green-600" />
-                            : <XCircle className="w-6 h-6 text-red-600" />
+                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                            {isCorrect 
+                              ? <CheckCircle2 className="w-8 h-8 text-white" />
+                              : <XCircle className="w-8 h-8 text-white" />
+                            }
+                          </motion.div>
+                        )}
+                        {selectedOption && isCorrectAnswer && !isSelected && (
+                          <CheckCircle2 className="w-8 h-8 text-white" />
                         )}
                       </motion.button>
                     );
                   })}
                 </div>
+                
+                {selectedOption && currentQuestion.funFact && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-primary/5 p-6 rounded-2xl border-2 border-primary/10 text-center"
+                  >
+                    <p className="text-sm font-bold text-primary uppercase mb-2">Did you know?</p>
+                    <p className="text-lg italic text-muted-foreground">"{currentQuestion.funFact}"</p>
+                  </motion.div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

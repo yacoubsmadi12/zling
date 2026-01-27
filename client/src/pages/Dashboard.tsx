@@ -175,20 +175,20 @@ export default function Dashboard() {
             </motion.div>
             <motion.div variants={item}>
               <StatCard 
+                label="Words Learned" 
+                value={user.wordsLearned || 0} 
+                icon={BookOpen} 
+                color="blue"
+                trend="Keep it up!"
+              />
+            </motion.div>
+            <motion.div variants={item}>
+              <StatCard 
                 label="Day Streak" 
                 value={user.streak} 
                 icon={Flame} 
                 color="orange"
                 trend="You're on fire!"
-              />
-            </motion.div>
-            <motion.div variants={item}>
-              <StatCard 
-                label="Level" 
-                value={Math.floor(user.points / 1000) + 1} 
-                icon={Zap} 
-                color="secondary"
-                trend="Novice"
               />
             </motion.div>
           </motion.div>

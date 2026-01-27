@@ -12,7 +12,7 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser & { role?: string; fullName?: string; email?: string }): Promise<User>;
-  updateUserStats(userId: number, points: number, streakIncrement: number): Promise<User>;
+  updateUserStats(userId: number, points: number, wordsLearned: number): Promise<User>;
   getAllUsers(): Promise<User[]>;
 
   // Terms
@@ -79,15 +79,20 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async updateUserStats(userId: number, points: number, streakIncrement: number): Promise<User> {
-    const [user] = await db.update(users)
+  async updateUserStats(userId: number, points: number, wordsLearned: number): Promise<User> {
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) throw new Error("User not found");
+
+    const [updatedUser] = await db.update(users)
       .set({ 
         points: sql`points + ${points}`,
-        streak: streakIncrement === 0 ? 0 : sql`streak + ${streakIncrement}`
+        streak: points > 0 ? sql`streak + 1` : sql`streak`,
+        wordsLearned: sql`words_learned + ${wordsLearned}`,
+        avgQuizScore: Math.floor(((user.avgQuizScore || 0) + (points > 0 ? 100 : 0)) / 2)
       })
       .where(eq(users.id, userId))
       .returning();
-    return user;
+    return updatedUser;
   }
 
   async getAllUsers(): Promise<User[]> {

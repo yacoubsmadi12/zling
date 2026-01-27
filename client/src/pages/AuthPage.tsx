@@ -27,39 +27,18 @@ export default function AuthPage() {
         <div className="w-full max-w-md space-y-8">
           <div className="text-center mb-8">
             <h1 className="font-display text-4xl font-bold text-primary mb-2">Zlingo</h1>
-            <p className="text-muted-foreground">Gamified vocabulary for telecom pros.</p>
+            <p className="text-muted-foreground">Authenticate using your Employee ID and Password.</p>
           </div>
 
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="login">
-              <Card className="border-none shadow-xl shadow-primary/5">
-                <CardHeader>
-                  <CardTitle>Welcome Back</CardTitle>
-                  <CardDescription>Enter your credentials to continue your streak.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <LoginForm />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="register">
-              <Card className="border-none shadow-xl shadow-primary/5">
-                <CardHeader>
-                  <CardTitle>Create Account</CardTitle>
-                  <CardDescription>Join your department and start competing.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <RegisterForm />
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+          <Card className="border-none shadow-xl shadow-primary/5">
+            <CardHeader>
+              <CardTitle>Company Login</CardTitle>
+              <CardDescription>Enter your Employee ID to access the platform.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LoginForm />
+            </CardContent>
+          </Card>
         </div>
       </div>
 
@@ -109,10 +88,10 @@ function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="username">Username</Label>
+        <Label htmlFor="username">Employee ID</Label>
         <Input 
           id="username"
-          placeholder="e.g. telecom_pro" 
+          placeholder="e.g. 12345" 
           value={formData.username}
           onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
           required
@@ -134,77 +113,6 @@ function LoginForm() {
         disabled={loginMutation.isPending}
       >
         {loginMutation.isPending ? <Loader2 className="animate-spin mr-2" /> : "Sign In"}
-      </Button>
-    </form>
-  );
-}
-
-function RegisterForm() {
-  const { registerMutation } = useAuth();
-  const [formData, setFormData] = useState({ 
-    username: "", 
-    password: "", 
-    department: "" 
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    registerMutation.mutate({ ...formData, points: 0, streak: 0, lastLoginDate: new Date(), isAdmin: false });
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="reg-username">Username</Label>
-        <Input 
-          id="reg-username"
-          placeholder="Choose a unique username" 
-          value={formData.username}
-          onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
-          required
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="department">Department</Label>
-        <Select 
-          value={formData.department} 
-          onValueChange={(val) => setFormData(prev => ({ ...prev, department: val }))}
-          required
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select Department" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Marketing">Marketing</SelectItem>
-            <SelectItem value="Sales">Sales</SelectItem>
-            <SelectItem value="Engineering">Engineering</SelectItem>
-            <SelectItem value="Legal">Legal</SelectItem>
-            <SelectItem value="HR">HR</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="reg-password">Password</Label>
-        <Input 
-          id="reg-password" 
-          type="password" 
-          value={formData.password}
-          onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-          required
-        />
-      </div>
-      <Button 
-        type="submit" 
-        className="w-full bg-secondary hover:bg-secondary/90 text-white font-semibold py-6 group"
-        disabled={registerMutation.isPending}
-      >
-        {registerMutation.isPending ? (
-          <Loader2 className="animate-spin mr-2" /> 
-        ) : (
-          <span className="flex items-center">
-            Create Account <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </span>
-        )}
       </Button>
     </form>
   );

@@ -11,8 +11,9 @@ export interface IStorage {
   // Users
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  createUser(user: InsertUser & { role?: string; fullName?: string; email?: string }): Promise<User>;
   updateUserStats(userId: number, points: number, streakIncrement: number): Promise<User>;
+  getAllUsers(): Promise<User[]>;
 
   // Terms
   getTerms(department?: string): Promise<Term[]>;
@@ -27,10 +28,20 @@ export interface IStorage {
 
   // Badges
   getBadges(): Promise<Badge[]>;
-  createBadge(badge: InsertBadge): Promise<Badge>; // Added
+  createBadge(badge: InsertBadge): Promise<Badge>;
   getUserBadges(userId: number): Promise<UserBadge[]>;
   awardBadge(userId: number, badgeId: number): Promise<UserBadge>;
   
+  // LDAP Settings
+  getLdapSettings(): Promise<LdapSettings | undefined>;
+  updateLdapSettings(settings: InsertLdapSettings): Promise<LdapSettings>;
+
+  // Rewards
+  getRewards(): Promise<Reward[]>;
+  createReward(reward: InsertReward): Promise<Reward>;
+  awardReward(userId: number, rewardId: number): Promise<UserReward>;
+  getUserRewards(userId: number): Promise<UserReward[]>;
+
   // Session
   sessionStore: session.Store;
 }
@@ -56,8 +67,15 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
+  async createUser(insertUser: InsertUser & { role?: string; fullName?: string; email?: string }): Promise<User> {
+    const { username, department, role, fullName, email } = insertUser;
+    const [user] = await db.insert(users).values({
+      username,
+      department,
+      role: role || "employee",
+      fullName: fullName || null,
+      email: email || null,
+    }).returning();
     return user;
   }
 
@@ -70,6 +88,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
     return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return db.select().from(users);
   }
 
   // Term methods
@@ -117,6 +139,41 @@ export class DatabaseStorage implements IStorage {
   async awardBadge(userId: number, badgeId: number): Promise<UserBadge> {
     const [badge] = await db.insert(userBadges).values({ userId, badgeId }).returning();
     return badge;
+  }
+
+  // LDAP Settings
+  async getLdapSettings(): Promise<LdapSettings | undefined> {
+    const [settings] = await db.select().from(ldapSettings).limit(1);
+    return settings;
+  }
+
+  async updateLdapSettings(settings: InsertLdapSettings): Promise<LdapSettings> {
+    const existing = await this.getLdapSettings();
+    if (existing) {
+      const [updated] = await db.update(ldapSettings).set(settings).where(eq(ldapSettings.id, existing.id)).returning();
+      return updated;
+    }
+    const [created] = await db.insert(ldapSettings).values(settings).returning();
+    return created;
+  }
+
+  // Rewards
+  async getRewards(): Promise<Reward[]> {
+    return db.select().from(rewards);
+  }
+
+  async createReward(reward: InsertReward): Promise<Reward> {
+    const [newReward] = await db.insert(rewards).values(reward).returning();
+    return newReward;
+  }
+
+  async awardReward(userId: number, rewardId: number): Promise<UserReward> {
+    const [userReward] = await db.insert(userRewards).values({ userId, rewardId }).returning();
+    return userReward;
+  }
+
+  async getUserRewards(userId: number): Promise<UserReward[]> {
+    return db.select().from(userRewards).where(eq(userRewards.userId, userId));
   }
 }
 

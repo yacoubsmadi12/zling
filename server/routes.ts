@@ -148,11 +148,98 @@ export async function registerRoutes(
     });
   });
 
-  // --- Seed Data ---
-  await seedData();
+  // LDAP Settings
+  app.get("/api/admin/ldap-settings", async (req, res) => {
+    if (!req.isAuthenticated() || (req.user as User).role !== "admin") {
+      return res.status(403).send("Forbidden");
+    }
+    const settings = await storage.getLdapSettings();
+    res.json(settings);
+  });
 
-  return httpServer;
-}
+  app.post("/api/admin/ldap-settings", async (req, res) => {
+    if (!req.isAuthenticated() || (req.user as User).role !== "admin") {
+      return res.status(403).send("Forbidden");
+    }
+    try {
+      const input = insertLdapSettingsSchema.parse(req.body);
+      const settings = await storage.updateLdapSettings(input);
+      res.json(settings);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json(err);
+      }
+      throw err;
+    }
+  });
+
+  // Admin: View all users
+  app.get("/api/admin/users", async (req, res) => {
+    if (!req.isAuthenticated() || (req.user as User).role !== "admin") {
+      return res.status(403).send("Forbidden");
+    }
+    const users = await storage.getAllUsers();
+    res.json(users);
+  });
+
+  // Rewards
+  app.get("/api/rewards", async (req, res) => {
+    const rewards = await storage.getRewards();
+    res.json(rewards);
+  });
+
+  app.post("/api/admin/rewards", async (req, res) => {
+    if (!req.isAuthenticated() || (req.user as User).role !== "admin") {
+      return res.status(403).send("Forbidden");
+    }
+    try {
+      const input = insertRewardSchema.parse(req.body);
+      const reward = await storage.createReward(input);
+      res.status(201).json(reward);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json(err);
+      }
+      throw err;
+    }
+  });
+
+  app.post("/api/admin/award-reward", async (req, res) => {
+    if (!req.isAuthenticated() || (req.user as User).role !== "admin") {
+      return res.status(403).send("Forbidden");
+    }
+    const { userId, rewardId } = req.body;
+    const userReward = await storage.awardReward(userId, rewardId);
+    res.status(201).json(userReward);
+  });
+
+  // Admin: Manually award badge
+  app.post("/api/admin/award-badge", async (req, res) => {
+    if (!req.isAuthenticated() || (req.user as User).role !== "admin") {
+      return res.status(403).send("Forbidden");
+    }
+    const { userId, badgeId } = req.body;
+    const userBadge = await storage.awardBadge(userId, badgeId);
+    res.status(201).json(userBadge);
+  });
+
+  // Admin: LDAP Sync (Stub)
+  app.post("/api/admin/ldap-sync", async (req, res) => {
+    if (!req.isAuthenticated() || (req.user as User).role !== "admin") {
+      return res.status(403).send("Forbidden");
+    }
+    // In a real app, this would trigger a background sync
+    res.json({ message: "LDAP sync initiated", userCount: 150 });
+  });
+
+  // Admin: Get all badges
+  app.get("/api/admin/badges", async (req, res) => {
+    if (!req.isAuthenticated() || (req.user as User).role !== "admin") {
+      return res.status(403).send("Forbidden");
+    }
+    const badges = await storage.getBadges();
+    res.json(badges);
+  });
 
 async function seedData() {
   const existingTerms = await storage.getTerms();

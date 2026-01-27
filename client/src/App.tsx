@@ -15,6 +15,7 @@ import QuizCenter from "@/pages/QuizCenter";
 import QuizRunner from "@/pages/QuizRunner";
 import Leaderboard from "@/pages/Leaderboard";
 import Profile from "@/pages/Profile";
+import AdminDashboard from "@/pages/admin-dashboard";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -24,6 +25,7 @@ function Router() {
       
       {/* Protected Routes */}
       <ProtectedRoute path="/" component={Dashboard} />
+      <ProtectedRoute path="/admin" component={AdminDashboard} />
       <ProtectedRoute path="/learn" component={Learn} />
       <ProtectedRoute path="/flashcards/:department" component={FlashcardsPage} />
       <ProtectedRoute path="/quiz" component={QuizCenter} />

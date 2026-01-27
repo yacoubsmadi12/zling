@@ -137,6 +137,34 @@ export const api = {
         }),
       },
     },
+    admin: {
+      ldapSettings: {
+        path: "/api/admin/ldap-settings",
+        method: "GET",
+      },
+      updateLdapSettings: {
+        path: "/api/admin/ldap-settings",
+        method: "POST",
+      },
+      users: {
+        path: "/api/admin/users",
+        method: "GET",
+      },
+      ldapSync: {
+        path: "/api/admin/ldap-sync",
+        method: "POST",
+      },
+      awardBadge: {
+        path: "/api/admin/award-badge",
+        method: "POST",
+      },
+    },
+    rewards: {
+      list: {
+        path: "/api/rewards",
+        method: "GET",
+      },
+    },
   }
 };
 

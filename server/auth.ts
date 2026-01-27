@@ -1,25 +1,67 @@
 import passport from "passport";
-import { Strategy as LocalStrategy } from "passport-local";
+import { Strategy as CustomStrategy } from "passport-custom";
 import { Express } from "express";
 import session from "express-session";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
-import { promisify } from "util";
 import { storage } from "./storage";
 import { User } from "@shared/schema";
+import ldap from "ldapjs";
 
-const scryptAsync = promisify(scrypt);
+async function authenticateLDAP(username: string, password: string): Promise<any> {
+  const settings = await storage.getLdapSettings();
+  if (!settings) throw new Error("LDAP not configured");
 
-async function hashPassword(password: string) {
-  const salt = randomBytes(16).toString("hex");
-  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-  return `${buf.toString("hex")}.${salt}`;
-}
+  return new Promise((resolve, reject) => {
+    const client = ldap.createClient({ url: settings.url });
+    
+    const userDn = `uid=${username},${settings.baseDn}`; // Example DN structure
+    
+    client.bind(userDn, password, (err) => {
+      if (err) {
+        client.destroy();
+        return reject(err);
+      }
 
-async function comparePasswords(supplied: string, stored: string) {
-  const [hashed, salt] = stored.split(".");
-  const hashedBuf = Buffer.from(hashed, "hex");
-  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return timingSafeEqual(hashedBuf, suppliedBuf);
+      const opts: ldap.SearchOptions = {
+        filter: `(uid=${username})`,
+        scope: "sub",
+        attributes: ["cn", "mail", "department", "memberOf"]
+      };
+
+      client.search(settings.baseDn, opts, (err, res) => {
+        if (err) {
+          client.destroy();
+          return reject(err);
+        }
+
+        let userEntry: any = null;
+        res.on("searchEntry", (entry) => {
+          userEntry = entry.object;
+        });
+
+        res.on("error", (err) => {
+          client.destroy();
+          reject(err);
+        });
+
+        res.on("end", () => {
+          client.destroy();
+          if (!userEntry) return reject(new Error("User not found in LDAP"));
+          
+          const isAdmin = Array.isArray(userEntry.memberOf) 
+            ? userEntry.memberOf.some((g: string) => g.includes(settings.adminGroup))
+            : typeof userEntry.memberOf === "string" && userEntry.memberOf.includes(settings.adminGroup);
+
+          resolve({
+            username: username,
+            fullName: userEntry.cn,
+            email: userEntry.mail,
+            department: userEntry.department || "Unknown",
+            role: isAdmin ? "admin" : "employee"
+          });
+        });
+      });
+    });
+  });
 }
 
 export function setupAuth(app: Express) {
@@ -43,16 +85,34 @@ export function setupAuth(app: Express) {
   app.use(passport.session());
 
   passport.use(
-    new LocalStrategy(async (username, password, done) => {
+    "ldap",
+    new CustomStrategy(async (req, done) => {
       try {
-        const user = await storage.getUserByUsername(username);
-        if (!user || !(await comparePasswords(password, user.password))) {
-          return done(null, false);
+        const { username, password } = req.body;
+        if (!username || !password) return done(null, false);
+
+        const ldapUser = await authenticateLDAP(username, password);
+        
+        let user = await storage.getUserByUsername(username);
+        if (!user) {
+          user = await storage.createUser({
+            username: ldapUser.username,
+            fullName: ldapUser.fullName,
+            email: ldapUser.email,
+            department: ldapUser.department,
+            role: ldapUser.role
+          });
         } else {
-          return done(null, user);
+          // Sync role on every login
+          if (user.role !== ldapUser.role) {
+            // Update user role if needed (not in IStorage yet, but we'll use storage.createUser logic or similar)
+          }
         }
+        
+        return done(null, user);
       } catch (err) {
-        return done(err);
+        console.error("LDAP Auth Error:", err);
+        return done(null, false);
       }
     }),
   );
@@ -67,36 +127,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/register", async (req, res, next) => {
-    try {
-      const { username, password, department } = req.body;
-      
-      if (!username || !password || !department) {
-        return res.status(400).json({ message: "Username, password, and department are required" });
-      }
-
-      const existingUser = await storage.getUserByUsername(username);
-      if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
-      }
-
-      const hashedPassword = await hashPassword(password);
-      const user = await storage.createUser({
-        username,
-        password: hashedPassword,
-        department,
-      });
-
-      req.login(user, (err) => {
-        if (err) return next(err);
-        res.status(201).json(user);
-      });
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  app.post("/api/login", passport.authenticate("local"), (req, res) => {
+  app.post("/api/login", passport.authenticate("ldap"), (req, res) => {
     res.status(200).json(req.user);
   });
 

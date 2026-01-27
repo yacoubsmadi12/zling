@@ -91,9 +91,16 @@ export function setupAuth(app: Express) {
         const { username, password } = req.body;
         if (!username || !password) return done(null, false);
 
+        // First try local database
+        const localUser = await storage.getUserByUsername(username);
+        if (localUser && localUser.password === password) {
+          return done(null, localUser);
+        }
+
+        // Fallback to LDAP
         const ldapUser = await authenticateLDAP(username, password);
         
-        let user = await storage.getUserByUsername(username);
+        let user = localUser;
         if (!user) {
           user = await storage.createUser({
             username: ldapUser.username,
@@ -102,13 +109,11 @@ export function setupAuth(app: Express) {
             department: ldapUser.department,
             role: ldapUser.role
           });
-        } else {
-          // Sync role and info on every login if needed
         }
         
         return done(null, user);
       } catch (err) {
-        console.error("LDAP Auth Error:", err);
+        console.error("Auth Error:", err);
         return done(null, false);
       }
     }),

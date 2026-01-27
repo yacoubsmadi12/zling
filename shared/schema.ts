@@ -8,6 +8,7 @@ export * from "./models/chat"; // Export chat schema for integration
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(), // Employee ID from LDAP
+  password: text("password"),
   fullName: text("full_name"),
   email: text("email"),
   department: text("department").notNull(),

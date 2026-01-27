@@ -22,7 +22,7 @@ export async function generateImage(prompt: string): Promise<string> {
 
 export async function generateImageBuffer(
   prompt: string,
-  size: "1024x1024" | "512x512" | "256x256" = "1024x1024"
+  size: "256x256" | "512x512" | "1024x1024" = "256x256"
 ): Promise<Buffer> {
   const response = await openai.images.generate({
     model: "gpt-image-1",

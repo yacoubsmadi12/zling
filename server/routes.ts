@@ -43,7 +43,7 @@ export async function registerRoutes(
   app.post("/api/user/generate-avatar", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
     try {
-      const prompt = `A stylized game-like avatar for a telecom professional, professional yet creative, flat design style, high quality, suitable for a mobile game profile picture.`;
+      const prompt = `A stylized professional telecom employee avatar, flat design, modern corporate style, friendly expression, vibrant colors.`;
       
       const { generateImage } = await import("./replit_integrations/image/client");
       const avatarUrl = await generateImage(prompt);

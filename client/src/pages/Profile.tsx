@@ -49,7 +49,7 @@ export default function Profile() {
             <div className="px-8 pb-8">
               <div className="relative -mt-16 mb-6 flex justify-between items-end">
                 <div className="relative">
-                  <Avatar className="w-32 h-32 border-4 border-card shadow-xl">
+                  <Avatar className="w-32 h-32 border-4 border-card shadow-xl overflow-visible">
                     <AvatarImage src={user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`} />
                     <AvatarFallback className="text-4xl">{user.username[0]}</AvatarFallback>
                   </Avatar>

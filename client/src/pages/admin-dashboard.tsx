@@ -12,8 +12,9 @@ import { insertLdapSettingsSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, ShieldCheck, Users, Settings, Award } from "lucide-react";
+import { Loader2, ShieldCheck, Users, Settings, Award, ArrowLeft } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { Link } from "wouter";
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -87,9 +88,17 @@ export default function AdminDashboard() {
 
   return (
     <div className="container mx-auto py-8">
-      <div className="flex items-center gap-4 mb-8">
-        <ShieldCheck className="w-8 h-8 text-primary" />
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <ShieldCheck className="w-8 h-8 text-primary" />
+          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        </div>
+        <Link href="/">
+          <Button variant="ghost" className="gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Home
+          </Button>
+        </Link>
       </div>
 
       <Tabs defaultValue="employees" className="space-y-4">

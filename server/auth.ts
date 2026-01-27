@@ -35,7 +35,7 @@ async function authenticateLDAP(username: string, password: string): Promise<any
 
         let userEntry: any = null;
         res.on("searchEntry", (entry) => {
-          userEntry = entry.object;
+          userEntry = (entry as any).object;
         });
 
         res.on("error", (err) => {

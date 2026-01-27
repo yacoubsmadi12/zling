@@ -138,13 +138,24 @@ export default function AdminDashboard() {
                         <TableCell>{u.department}</TableCell>
                         <TableCell>{u.points}</TableCell>
                         <TableCell>{u.streak}</TableCell>
-                        <TableCell>
-                          <Button size="sm" variant="outline" onClick={() => {
-                            const badgeId = badges?.[0]?.id;
-                            if (badgeId) awardBadgeMutation.mutate({ userId: u.id, badgeId });
-                          }}>
-                            Award Badge
-                          </Button>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <div className="flex items-center gap-4 mr-4">
+                              <div className="text-xs text-muted-foreground">
+                                Score: <span className="font-medium text-foreground">{u.points}</span>
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Streak: <span className="font-medium text-foreground">{u.streak}</span>
+                              </div>
+                            </div>
+                            <Button size="sm" variant="outline" onClick={() => {
+                              const badgeId = badges?.[0]?.id;
+                              if (badgeId) awardBadgeMutation.mutate({ userId: u.id, badgeId });
+                            }}>
+                              <Award className="w-4 h-4 mr-2" />
+                              Award Badge
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

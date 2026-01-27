@@ -11,6 +11,15 @@ export const openai = new OpenAI({
  * Generate an image and return as Buffer.
  * Uses gpt-image-1 model via Replit AI Integrations.
  */
+/**
+ * Generate an image and return as a base64 data URL string.
+ * This is used for generating avatars.
+ */
+export async function generateImage(prompt: string): Promise<string> {
+  const buffer = await generateImageBuffer(prompt);
+  return `data:image/png;base64,${buffer.toString("base64")}`;
+}
+
 export async function generateImageBuffer(
   prompt: string,
   size: "1024x1024" | "512x512" | "256x256" = "1024x1024"

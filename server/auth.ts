@@ -98,10 +98,17 @@ export function setupAuth(app: Express) {
         }
 
         // Fallback to LDAP
-        const ldapUser = await authenticateLDAP(username, password);
-        
-        let user = localUser;
-        if (!user) {
+    let ldapUser: any = null;
+    try {
+      ldapUser = await authenticateLDAP(username, password);
+    } catch (ldapErr) {
+      console.log("LDAP Auth skip/fail:", ldapErr.message);
+    }
+    
+    if (!ldapUser) return done(null, false);
+    
+    let user = localUser;
+    if (!user) {
           user = await storage.createUser({
             username: ldapUser.username,
             fullName: ldapUser.fullName,
@@ -129,8 +136,17 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", passport.authenticate("ldap"), (req, res) => {
-    res.status(200).json(req.user);
+  app.post("/api/login", (req, res, next) => {
+    passport.authenticate("ldap", (err, user, info) => {
+      if (err) return next(err);
+      if (!user) {
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+      req.logIn(user, (err) => {
+        if (err) return next(err);
+        res.json(user);
+      });
+    })(req, res, next);
   });
 
   app.post("/api/logout", (req, res, next) => {

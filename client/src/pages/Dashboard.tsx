@@ -1,14 +1,25 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Navigation } from "@/components/Navigation";
 import { StatCard } from "@/components/StatCard";
-import { Trophy, Flame, Zap, Target, ArrowRight } from "lucide-react";
+import { Trophy, Flame, Zap, Target, ArrowRight, User as UserIcon, BookOpen, Brain } from "lucide-react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import { User, Quiz } from "@shared/schema";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Dashboard() {
   const { user } = useAuth();
 
+  const { data: allUsers } = useQuery<User[]>({
+    queryKey: ["/api/admin/users"],
+    enabled: user?.role === "admin"
+  });
+
   if (!user) return null;
+
+  const isAdmin = user.role === "admin";
 
   const container = {
     hidden: { opacity: 0 },
@@ -24,6 +35,104 @@ export default function Dashboard() {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0 }
   };
+
+  if (isAdmin) {
+    return (
+      <div className="flex min-h-screen bg-background pb-20 md:pb-0">
+        <Navigation />
+        
+        <main className="flex-1 md:ml-64 p-4 md:p-8 overflow-y-auto">
+          <div className="max-w-6xl mx-auto space-y-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-display font-bold">
+                  System <span className="text-primary">Overview</span>
+                </h1>
+                <p className="text-muted-foreground mt-1">Real-time employee performance and engagement tracking.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <StatCard 
+                label="Total Employees" 
+                value={allUsers?.length || 0} 
+                icon={UserIcon} 
+                color="primary"
+              />
+              <StatCard 
+                label="Avg. Points" 
+                value={allUsers ? Math.round(allUsers.reduce((acc, u) => acc + u.points, 0) / allUsers.length) : 0} 
+                icon={Trophy} 
+                color="secondary"
+              />
+              <StatCard 
+                label="Active Streaks" 
+                value={allUsers?.filter(u => u.streak > 0).length || 0} 
+                icon={Flame} 
+                color="orange"
+              />
+            </div>
+
+            <Card className="border shadow-sm overflow-hidden">
+              <CardHeader className="bg-muted/30 border-b">
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="w-5 h-5 text-primary" />
+                  Employee Performance Tracker
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="pl-6">Employee</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead className="text-center">Points</TableHead>
+                      <TableHead className="text-center">Streak</TableHead>
+                      <TableHead className="text-center">Last Active</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {allUsers?.map((u) => (
+                      <TableRow key={u.id} className="group hover:bg-muted/30 transition-colors">
+                        <TableCell className="pl-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="font-bold">{u.fullName || u.username}</span>
+                            <span className="text-xs text-muted-foreground">{u.email || `@${u.username}`}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="px-2 py-1 rounded-md bg-secondary/10 text-secondary text-xs font-medium border border-secondary/20">
+                            {u.department}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="inline-flex items-center gap-1 font-mono font-bold text-primary">
+                            <Zap className="w-3 h-3" />
+                            {u.points}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="inline-flex items-center gap-1 font-mono font-bold text-orange-500">
+                            <Flame className="w-3 h-3" />
+                            {u.streak}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className="text-sm text-muted-foreground">
+                            {u.lastLoginDate ? new Date(u.lastLoginDate).toLocaleDateString() : 'Never'}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-background pb-20 md:pb-0">

@@ -15,9 +15,9 @@ export function Navigation() {
     { href: "/profile", icon: User, label: "Profile" },
   ];
 
-  if (user?.role === "admin") {
-    navItems.push({ href: "/admin", icon: Shield, label: "Admin" });
-  }
+  const filteredNavItems = user?.role === "admin" 
+    ? [{ href: "/", icon: Home, label: "Home" }, { href: "/admin", icon: Shield, label: "Admin" }, { href: "/profile", icon: User, label: "Profile" }]
+    : navItems;
 
   return (
     <>
@@ -33,7 +33,7 @@ export function Navigation() {
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
-          {navItems.map((item) => {
+          {filteredNavItems.map((item) => {
             const isActive = location === item.href;
             return (
               <Link key={item.href} href={item.href}>
@@ -67,7 +67,7 @@ export function Navigation() {
       {/* Mobile Bottom Tab Bar */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t z-50 px-4 py-2 pb-safe">
         <div className="flex justify-around items-center">
-          {navItems.map((item) => {
+          {filteredNavItems.map((item) => {
             const isActive = location === item.href;
             return (
               <Link key={item.href} href={item.href}>

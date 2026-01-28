@@ -24,11 +24,14 @@ let aiInstance: GoogleGenAI | null = null;
 
 function getAi() {
   if (!aiInstance) {
-    const key = process.env.GOOGLE_API_KEY || 
-                process.env.AI_INTEGRATIONS_GEMINI_API_KEY || 
-                "REQUIRED_FOR_CONSTRUCTOR";
+  const key = process.env.GOOGLE_API_KEY || 
+                process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
     
-    const options: { apiKey: string; httpOptions?: { apiVersion: string; baseUrl: string } } = {
+    if (!key) {
+      throw new Error("Gemini API key is missing. Please set GOOGLE_API_KEY or use Replit AI integration.");
+    }
+
+    const options: any = {
       apiKey: key,
     };
 
@@ -46,12 +49,16 @@ function getAi() {
 }
 
 async function generateContent(prompt: string): Promise<string> {
-  const ai = getAi();
-  const response = await ai.models.generateContent({
-    model: "gemini-1.5-flash",
-    contents: prompt,
-  });
-  return response.text || "";
+  try {
+    const ai = getAi();
+    const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text() || "";
+  } catch (error) {
+    console.error("Gemini Generation Error:", error);
+    throw error;
+  }
 }
 
 export async function registerRoutes(

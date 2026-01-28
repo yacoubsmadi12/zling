@@ -15,6 +15,8 @@ export default function QuizRunner() {
   const { mutateAsync: fetchQuestion, isPending: isLoadingQuestion } = useAiDuel();
   const { mutate: submitResult } = useSubmitQuiz();
   const { toast } = useToast();
+  const [search] = useState(window.location.search);
+  const department = new URLSearchParams(search).get("department");
 
   const [currentQuestion, setCurrentQuestion] = useState<any>(null);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -25,22 +27,6 @@ export default function QuizRunner() {
   const [timeLeft, setTimeLeft] = useState(15);
   const [isPaused, setIsPaused] = useState(false);
 
-  // Timer logic
-  useEffect(() => {
-    if (gameOver || !currentQuestion || isPaused || selectedOption) return;
-
-    if (timeLeft <= 0) {
-      handleAnswer(""); // Time's up
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => prev - 1);
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [timeLeft, gameOver, currentQuestion, isPaused, selectedOption]);
-
   // Load initial question
   useEffect(() => {
     loadNewQuestion();
@@ -48,11 +34,23 @@ export default function QuizRunner() {
 
   const loadNewQuestion = async () => {
     try {
-      const q = await fetchQuestion({ 
-        difficulty: "medium", 
-        topic: mode === 'daily' ? "general telecom" : undefined 
-      });
-      setCurrentQuestion(q);
+      if (mode === 'daily') {
+        const res = await fetch(`/api/ai/daily-content?department=${encodeURIComponent(department || "")}`);
+        if (!res.ok) throw new Error("Failed to fetch daily content");
+        const data = await res.json();
+        const quiz = data.quiz;
+        if (quiz && quiz[questionCount]) {
+          setCurrentQuestion(quiz[questionCount]);
+        } else {
+          setGameOver(true);
+        }
+      } else {
+        const q = await fetchQuestion({ 
+          difficulty: "medium", 
+          topic: undefined 
+        });
+        setCurrentQuestion(q);
+      }
       setSelectedOption(null);
       setIsCorrect(null);
       setTimeLeft(15);

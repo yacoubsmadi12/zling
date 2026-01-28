@@ -15,6 +15,7 @@ import {
   MessageSquareShare 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 const departments = [
   { id: "Finance", icon: Wallet, color: "bg-emerald-100 text-emerald-600", desc: "Banking, accounts, and financial management." },
@@ -49,7 +50,6 @@ export default function Learn() {
             {departments.map((dept, index) => {
               const isUserDept = user.department === dept.id;
               return (
-                <Link key={dept.id} href={`/flashcards/${dept.id}`}>
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -64,17 +64,24 @@ export default function Learn() {
                         YOUR DEPT
                       </div>
                     )}
+                    <Link href={`/flashcards/${dept.id}`} className="absolute inset-0 z-10" />
                     <div className="flex items-start gap-4">
                       <div className={cn("p-4 rounded-xl", dept.color, "group-hover:scale-110 transition-transform duration-300")}>
                         <dept.icon className="w-8 h-8" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold mb-1 group-hover:text-primary transition-colors">{dept.id}</h3>
-                        <p className="text-sm text-muted-foreground">{dept.desc}</p>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-xl font-bold group-hover:text-primary transition-colors">{dept.id}</h3>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-4">{dept.desc}</p>
+                        <Link href={`/quiz/daily?department=${encodeURIComponent(dept.id)}`}>
+                          <Button size="sm" variant="outline" className="relative z-20 hover-elevate">
+                            Take Quiz
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                   </motion.div>
-                </Link>
               );
             })}
           </div>

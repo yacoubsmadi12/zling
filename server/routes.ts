@@ -71,10 +71,10 @@ export async function registerRoutes(
     
     try {
       const user = req.user as User;
-      const department = user.department;
+      const department = (req.query.department as string) || user.department;
       const today = new Date().toISOString().split('T')[0];
 
-      // Check if content already exists for today for this user
+      // Check if content already exists for today for this department
       const existingContent = await storage.getDailyContent(department, today);
       if (existingContent) {
         const term = (await storage.getTerms()).find(t => t.id === existingContent.termId);
@@ -146,6 +146,22 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Daily Content Gen Error:", error);
       res.status(500).json({ message: "Failed to generate daily content" });
+    }
+  });
+
+  app.get("/api/departments", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const departments = await storage.getUniqueDepartments();
+      // Ensure current user's department is included even if no other users exist
+      const user = req.user as User;
+      if (!departments.includes(user.department)) {
+        departments.push(user.department);
+      }
+      res.json(departments);
+    } catch (error) {
+      console.error("Error fetching departments:", error);
+      res.status(500).json({ message: "Failed to fetch departments" });
     }
   });
 

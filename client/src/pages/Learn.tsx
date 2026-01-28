@@ -70,8 +70,8 @@ export default function Learn() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
                     className={cn(
-                      "relative overflow-hidden group cursor-pointer bg-card rounded-2xl border shadow-sm hover:shadow-xl transition-all duration-300 p-6",
-                      isUserDept ? "ring-2 ring-primary ring-offset-2 dark:ring-offset-background" : ""
+                      "relative overflow-hidden group bg-card/40 backdrop-blur-sm rounded-2xl border shadow-sm hover:shadow-xl transition-all duration-300 p-6",
+                      isUserDept ? "ring-2 ring-primary ring-offset-2 dark:ring-offset-background bg-card/60" : ""
                     )}
                   >
                     {isUserDept && (
@@ -79,18 +79,21 @@ export default function Learn() {
                         YOUR DEPT
                       </div>
                     )}
-                    <Link href={`/flashcards/${dept.id}`} className="absolute inset-0 z-10" />
                     <div className="flex items-start gap-4">
-                      <div className={cn("p-4 rounded-xl shadow-lg shadow-black/5", dept.color, "group-hover:scale-110 transition-transform duration-300")}>
-                        <dept.icon className="w-8 h-8" />
-                      </div>
-                      <div>
+                      <Link href={`/flashcards/${dept.id}`} className="cursor-pointer">
+                        <div className={cn("p-4 rounded-xl shadow-lg shadow-black/5", dept.color, "hover:scale-110 transition-transform duration-300")}>
+                          <dept.icon className="w-8 h-8" />
+                        </div>
+                      </Link>
+                      <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="text-xl font-bold group-hover:text-primary transition-colors">{dept.id}</h3>
+                          <Link href={`/flashcards/${dept.id}`} className="cursor-pointer">
+                            <h3 className="text-xl font-bold hover:text-primary transition-colors">{dept.id}</h3>
+                          </Link>
                         </div>
                         <p className="text-sm text-muted-foreground mb-4">{dept.desc}</p>
                         <Link href={`/quiz/daily?department=${encodeURIComponent(dept.id)}`}>
-                          <Button size="sm" variant="outline" className="relative z-20 hover-elevate">
+                          <Button size="sm" variant="outline" className="relative z-20 hover-elevate no-default-hover-elevate">
                             Take Quiz
                           </Button>
                         </Link>

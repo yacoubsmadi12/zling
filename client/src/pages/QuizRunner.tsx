@@ -129,7 +129,7 @@ export default function QuizRunner() {
             <Link href="/quiz">
               <Button className="w-full py-6 text-lg rounded-xl">Play Again</Button>
             </Link>
-            <Link href="/dashboard">
+            <Link href="/">
               <Button variant="outline" className="w-full py-6 text-lg rounded-xl">Back to Dashboard</Button>
             </Link>
           </div>

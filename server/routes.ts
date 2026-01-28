@@ -17,33 +17,21 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Lazy-initialize Gemini AI to avoid constructor errors during startup if keys are missing
-let aiInstance: GoogleGenAI | null = null;
+let aiInstance: GoogleGenerativeAI | null = null;
 
 function getAi() {
   if (!aiInstance) {
-  const key = process.env.GOOGLE_API_KEY || 
+    const key = process.env.GOOGLE_API_KEY || 
                 process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
     
     if (!key) {
       throw new Error("Gemini API key is missing. Please set GOOGLE_API_KEY or use Replit AI integration.");
     }
 
-    const options: any = {
-      apiKey: key,
-    };
-
-    // Apply Replit AI Integrations settings if using them
-    if (key === process.env.AI_INTEGRATIONS_GEMINI_API_KEY && process.env.AI_INTEGRATIONS_GEMINI_BASE_URL) {
-      options.httpOptions = {
-        apiVersion: "",
-        baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
-      };
-    }
-    
-    aiInstance = new GoogleGenAI(options);
+    aiInstance = new GoogleGenerativeAI(key);
   }
   return aiInstance;
 }

@@ -34,6 +34,13 @@ export default function FlashcardsPage() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [activeTab, setActiveTab] = useState<"current" | "history">("current");
 
+  useEffect(() => {
+    if (department) {
+      apiRequest("POST", "/api/user/points", { points: 5, reason: `Viewed ${department}` })
+        .then(() => queryClient.invalidateQueries({ queryKey: ["/api/user"] }));
+    }
+  }, [department]);
+
   // Fetch learned terms
   const { data: learnedTerms = [] } = useQuery<LearnedTerm[]>({
     queryKey: ["/api/user/learned-terms"],

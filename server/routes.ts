@@ -469,6 +469,20 @@ export async function registerRoutes(
     res.json(badges);
   });
 
+  // --- Points API ---
+  app.post("/api/user/points", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const { points, reason } = req.body;
+      const user = req.user as User;
+      const updatedUser = await storage.addPoints(user.id, points, reason);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error adding points:", error);
+      res.status(500).json({ message: "Failed to add points" });
+    }
+  });
+
   // --- Seed Data ---
   await seedData();
 
@@ -511,6 +525,9 @@ async function seedData() {
       { name: "Streak Master", description: "Reached a 7-day streak", icon: "flame", condition: "streak:7" },
       { name: "Terminator", description: "Learned 50 terms", icon: "skull", condition: "terms:50" },
       { name: "Duelist", description: "Won 5 duels", icon: "swords", condition: "duels:5" },
+      { name: "Shield", description: "Earned 300 points", icon: "shield", condition: "points:300" },
+      { name: "Medium Shield", description: "Earned 500 points", icon: "shield-check", condition: "points:500" },
+      { name: "Bronze Shield", description: "Earned 1000 points", icon: "shield-plus", condition: "points:1000" },
     ];
     for (const b of badgesData) {
       await storage.createBadge(b);

@@ -34,6 +34,19 @@ const departments = [
 
 export default function Learn() {
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      const lastLogin = user.lastLoginDate ? new Date(user.lastLoginDate).toDateString() : null;
+      const today = new Date().toDateString();
+      
+      if (lastLogin !== today) {
+        apiRequest("POST", "/api/user/points", { points: 5, reason: "Daily login" })
+          .then(() => queryClient.invalidateQueries({ queryKey: ["/api/user"] }));
+      }
+    }
+  }, [user]);
+
   if (!user) return null;
 
   return (

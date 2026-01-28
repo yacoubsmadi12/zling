@@ -19,6 +19,7 @@ export const users = pgTable("users", {
   avatarUrl: text("avatar_url"),
   wordsLearned: integer("words_learned").default(0).notNull(),
   avgQuizScore: integer("avg_quiz_score").default(0).notNull(),
+  lastPointsUpdate: timestamp("last_points_update").defaultNow(),
 });
 
 export const ldapSettings = pgTable("ldap_settings", {

@@ -4,19 +4,34 @@ import { Navigation } from "@/components/Navigation";
 import { Loader } from "@/components/Loader";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, Mail, Building, Award, Sparkles } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
+import { Badge as UIBadge } from "@/components/ui/badge";
+import { Calendar, Mail, Building, Award, Sparkles, Medal, Share2, Shield, ShieldCheck, ShieldPlus } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 
 export default function Profile() {
   const { user } = useAuth();
-  const { data: badges, isLoading } = useUserBadges();
+  const { data: userBadgesData, isLoading } = useUserBadges();
+  const { data: allBadges } = useQuery({ queryKey: ["/api/badges"] });
   const { toast } = useToast();
 
-  const generateAvatarMutation = useMutation({
+  const handleShare = (badgeName: string) => {
+    const text = `I just earned the ${badgeName} badge on Zlingo! I'm level ${Math.floor((user?.points || 0) / 1000) + 1} in my telecom learning journey.`;
+    const url = window.location.origin;
+    const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}&summary=${encodeURIComponent(text)}`;
+    window.open(linkedinUrl, '_blank');
+  };
+
+  const getBadgeIcon = (name: string) => {
+    if (name.includes("Bronze Shield")) return <ShieldPlus className="w-8 h-8 text-amber-600" />;
+    if (name.includes("Medium Shield")) return <ShieldCheck className="w-8 h-8 text-slate-400" />;
+    if (name.includes("Shield")) return <Shield className="w-8 h-8 text-blue-500" />;
+    return <Award className="w-8 h-8 text-primary" />;
+  };
+
+  if (!user) return null;
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/user/generate-avatar");
       return res.json();
@@ -68,13 +83,16 @@ export default function Profile() {
                   </Button>
                 </div>
                 <div className="flex gap-2 mb-2">
-                  <Badge variant="secondary" className="px-3 py-1 text-sm bg-primary/10 text-primary hover:bg-primary/20">
+                  <UIBadge variant="secondary" className="px-3 py-1 text-sm bg-primary/10 text-primary hover:bg-primary/20">
                     Level {Math.floor(user.points / 1000) + 1}
-                  </Badge>
+                  </UIBadge>
+                  <UIBadge variant="outline" className="px-3 py-1 text-sm border-primary text-primary font-bold">
+                    {user.points} Z-Points
+                  </UIBadge>
                 </div>
               </div>
               
-              <h1 className="text-3xl font-display font-bold mb-2">{user.username}</h1>
+              <h1 className="text-3xl font-display font-bold mb-2">{user.fullName || user.username}</h1>
               
               <div className="flex flex-wrap gap-6 text-muted-foreground">
                 <div className="flex items-center gap-2">
@@ -104,21 +122,40 @@ export default function Profile() {
             <CardContent>
               {isLoading ? (
                 <Loader />
-              ) : badges?.length === 0 ? (
+              ) : !userBadgesData || userBadgesData.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   No badges earned yet. Keep playing!
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  {badges?.map((ub: any) => (
-                    <div key={ub.id} className="flex flex-col items-center p-4 bg-muted/30 rounded-xl border border-border/50 hover:bg-muted/60 transition-colors text-center">
-                      <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mb-3">
-                        <span className="text-2xl">🏅</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                  {userBadgesData.map((ub: any) => {
+                    const badge = allBadges?.find((b: any) => b.id === ub.badgeId);
+                    if (!badge) return null;
+                    return (
+                      <div key={ub.id} className="flex flex-col items-center p-6 bg-card rounded-2xl border border-border hover:shadow-lg transition-all text-center group">
+                        <div className="w-16 h-16 bg-primary/5 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                          {getBadgeIcon(badge.name)}
+                        </div>
+                        <h3 className="font-bold text-lg mb-1">{badge.name}</h3>
+                        <p className="text-sm text-muted-foreground mb-4">{badge.description}</p>
+                        <div className="flex flex-col gap-2 w-full mt-auto">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full gap-2 hover-elevate"
+                            onClick={() => handleShare(badge.name)}
+                            data-testid={`button-share-${badge.id}`}
+                          >
+                            <Share2 className="w-4 h-4" />
+                            Share on LinkedIn
+                          </Button>
+                          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                            Earned {new Date(ub.earnedAt).toLocaleDateString()}
+                          </span>
+                        </div>
                       </div>
-                      <span className="font-bold text-sm truncate w-full">{ub.badgeId}</span>
-                      <span className="text-xs text-muted-foreground">{new Date(ub.earnedAt).toLocaleDateString()}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>

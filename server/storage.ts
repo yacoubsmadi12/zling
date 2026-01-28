@@ -53,6 +53,8 @@ export interface IStorage {
   hasUserLearnedTerm(userId: number, termId: number): Promise<boolean>;
   getUnlearnedTermsForDepartment(userId: number, department: string): Promise<Term[]>;
   getUserLearnedTermsWithDetails(userId: number): Promise<(UserLearnedTerm & { term: Term })[]>;
+  addPoints(userId: number, points: number, reason: string): Promise<User>;
+  checkAndAwardPointsBadges(userId: number): Promise<void>;
 
   // Cron specific
   getUniqueDepartments(): Promise<string[]>;
@@ -269,6 +271,44 @@ export class DatabaseStorage implements IStorage {
       ...lt,
       term: termsMap.get(lt.termId)!
     })).filter(lt => lt.term); // Filter out any with missing terms
+  }
+
+  async addPoints(userId: number, points: number, reason: string): Promise<User> {
+    const [user] = await db.update(users)
+      .set({ 
+        points: sql`points + ${points}`,
+        lastPointsUpdate: new Date()
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    await this.checkAndAwardPointsBadges(userId);
+    return user;
+  }
+
+  async checkAndAwardPointsBadges(userId: number): Promise<void> {
+    const user = await this.getUser(userId);
+    if (!user) return;
+
+    const userBadgesList = await this.getUserBadges(userId);
+    const badgeIds = new Set(userBadgesList.map(ub => ub.badgeId));
+
+    const allBadges = await this.getBadges();
+    
+    const pointBadges = [
+      { points: 300, name: "Shield" },
+      { points: 500, name: "Medium Shield" },
+      { points: 1000, name: "Bronze Shield" }
+    ];
+
+    for (const pb of pointBadges) {
+      if (user.points >= pb.points) {
+        const badge = allBadges.find(b => b.name === pb.name);
+        if (badge && !badgeIds.has(badge.id)) {
+          await this.awardBadge(userId, badge.id);
+        }
+      }
+    }
   }
 }
 

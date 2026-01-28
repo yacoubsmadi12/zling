@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useEffect } from "react";
 
 const departments = [
   { id: "Finance", icon: Wallet, color: "bg-emerald-100 text-emerald-600", desc: "Banking, accounts, and financial management." },

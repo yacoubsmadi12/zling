@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "wouter";
 import { useTerms } from "@/hooks/use-terms";
 import { Navigation } from "@/components/Navigation";
@@ -29,7 +29,7 @@ interface LearnedTerm {
 
 export default function FlashcardsPage() {
   const { department } = useParams();
-  const { data: terms, isLoading, error } = useTerms(department);
+  const { data: terms, isLoading, error, refetch } = useTerms(department);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [activeTab, setActiveTab] = useState<"current" | "history">("current");
@@ -44,8 +44,27 @@ export default function FlashcardsPage() {
     (lt) => lt.term?.department === department
   );
 
-  if (isLoading) return <Loader />;
+  // Fetch daily content if no terms found
+  const { data: dailyContent, isLoading: isLoadingDaily } = useQuery({
+    queryKey: ["/api/ai/daily-content", { department }],
+    queryFn: async () => {
+      const res = await fetch(`/api/ai/daily-content?department=${encodeURIComponent(department || "")}`);
+      if (!res.ok) throw new Error("Failed to fetch daily content");
+      return res.json();
+    },
+    enabled: !!department && (!terms || terms.length === 0) && !isLoading,
+  });
+
+  // Re-fetch terms after daily content is generated
+  useEffect(() => {
+    if (dailyContent && terms?.length === 0) {
+      refetch();
+    }
+  }, [dailyContent, terms, refetch]);
+
+  if (isLoading || isLoadingDaily) return <Loader />;
   if (error || !terms) return <div className="p-8 text-center text-red-500">Failed to load terms.</div>;
+
   if (terms.length === 0 && departmentLearnedTerms.length === 0) return (
     <div className="flex min-h-screen bg-background items-center justify-center">
       <div className="text-center">

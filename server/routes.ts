@@ -77,7 +77,7 @@ export async function registerRoutes(
       // Check if content already exists for today for this department
       const existingContent = await storage.getDailyContent(department, today);
       if (existingContent) {
-        const term = (await storage.getTerms()).find(t => t.id === existingContent.termId);
+        const term = (await storage.getTerms(department)).find(t => t.id === existingContent.termId);
         // Mark as learned if not already
         if (term) {
           await storage.markTermAsLearned(user.id, term.id);

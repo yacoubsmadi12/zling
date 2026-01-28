@@ -188,7 +188,7 @@ export default function Dashboard() {
                 value={user.streak} 
                 icon={Flame} 
                 color="orange"
-                trend="You're on fire!"
+                trend={user.streak > 0 ? "You're on fire!" : "Start your journey today!"}
               />
             </motion.div>
           </motion.div>

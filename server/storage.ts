@@ -111,7 +111,8 @@ export class DatabaseStorage implements IStorage {
         points: sql`points + ${points}`,
         streak: points > 0 ? sql`streak + 1` : sql`streak`,
         wordsLearned: sql`words_learned + ${wordsLearned}`,
-        avgQuizScore: Math.floor(((user.avgQuizScore || 0) + (points > 0 ? 100 : 0)) / 2)
+        avgQuizScore: Math.floor(((user.avgQuizScore || 0) + (points > 0 ? 100 : 0)) / 2),
+        lastLoginDate: new Date()
       })
       .where(eq(users.id, userId))
       .returning();
@@ -239,6 +240,13 @@ export class DatabaseStorage implements IStorage {
       return existing[0];
     }
     const [learned] = await db.insert(userLearnedTerms).values({ userId, termId }).returning();
+    
+    // Update user's wordsLearned count
+    const learnedTerms = await this.getUserLearnedTermIds(userId);
+    await db.update(users)
+      .set({ wordsLearned: learnedTerms.length })
+      .where(eq(users.id, userId));
+
     return learned;
   }
 

@@ -74,16 +74,6 @@ const miniGames = [
     badge: "Survivor",
     href: "/quiz/survival"
   },
-  {
-    id: "boss-fight",
-    title: "Boss Fight",
-    desc: "10 challenging questions vs the AI Boss.",
-    icon: Skull,
-    color: "from-slate-700 to-slate-900",
-    points: "250 Points",
-    badge: "Boss Slayer",
-    href: "/quiz/boss-fight"
-  },
 ];
 
 export default function QuizCenter() {

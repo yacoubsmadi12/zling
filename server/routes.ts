@@ -260,19 +260,6 @@ export async function registerRoutes(
     }
   });
 
-  // Monthly Boss: 10 hard questions
-  app.get("/api/games/monthly-boss", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
-    try {
-      // Select 10 random terms but format them as "hard" (could filter by department or just use random for now)
-      const terms = await storage.getRandomTerms(10);
-      res.json(terms);
-    } catch (error) {
-      console.error("Monthly Boss Error:", error);
-      res.status(500).json({ message: "Failed to fetch words for Monthly Boss" });
-    }
-  });
-
   // --- API Routes ---
 
   // Generate Avatar

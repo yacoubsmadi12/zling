@@ -1,8 +1,17 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Volume2, Loader2 } from "lucide-react";
+
+// Import local avatars
+import financeAvatar from "@/assets/avatars/avatar-finance.png";
+import engineeringAvatar from "@/assets/avatars/avatar-engineering.png";
+import marketingAvatar from "@/assets/avatars/avatar-marketing.png";
+import hrAvatar from "@/assets/avatars/avatar-hr.png";
+import salesAvatar from "@/assets/avatars/avatar-sales.png";
+import complianceAvatar from "@/assets/avatars/avatar-compliance.png";
+import techAvatar from "@/assets/avatars/avatar-tech.png";
+import legalAvatar from "@/assets/avatars/avatar-legal.png";
 
 interface AvatarProps {
   department: string;
@@ -10,60 +19,24 @@ interface AvatarProps {
   onSpeakEnd?: () => void;
 }
 
-const departmentPrompts: Record<string, string> = {
-  "Finance": "A professional male finance officer in a sharp suit, wearing glasses, holding a tablet with charts, friendly smile, clean office background.",
-  "Human Resources": "A friendly female HR manager, professional business casual attire, warm expression, modern office setting.",
-  "Engineering": "A focused male network engineer wearing a tech polo and a headset, standing in front of server racks.",
-  "Marketing": "A creative female marketing specialist, trendy office wear, energetic pose, bright colorful studio background.",
-  "Sales": "A confident male sales executive, professional suit, optimistic expression, modern glass office background.",
-  "Governance, Risk, and Compliance": "A serious but approachable female compliance officer, professional attire, holding a folder.",
-  "Consumer Business": "A friendly retail manager, professional uniform, standing in a modern store environment.",
-  "Legal and Regulatory": "A dignified male lawyer, formal suit, standing in a library-like office.",
-  "Technology & Digital Innovation": "A tech-savvy female innovator, wearing a futuristic headset, digital holographic background.",
-  "Corporate Communications & Sustainability": "A professional female spokesperson, business attire, standing in a green eco-friendly office.",
-  "Data Analytics and AI": "A male data scientist, casual tech wear, standing in front of multiple monitors with data visualizations."
+const departmentAvatars: Record<string, string> = {
+  "Finance": financeAvatar,
+  "Human Resources": hrAvatar,
+  "Engineering": engineeringAvatar,
+  "Marketing": marketingAvatar,
+  "Sales": salesAvatar,
+  "Governance, Risk, and Compliance": complianceAvatar,
+  "Consumer Business": hrAvatar, // Fallback
+  "Legal and Regulatory": legalAvatar,
+  "Technology & Digital Innovation": techAvatar,
+  "Corporate Communications & Sustainability": marketingAvatar, // Fallback
+  "Data Analytics and AI": techAvatar // Fallback
 };
 
 export function AnimatedAvatar({ department, textToSpeak, onSpeakEnd }: AvatarProps) {
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const avatarUrl = departmentAvatars[department] || engineeringAvatar;
   
-  // Generate avatar if not already done
-  useEffect(() => {
-    let isMounted = true;
-    async function getAvatar() {
-      setIsGenerating(true);
-      try {
-        const prompt = departmentPrompts[department] || "A professional office employee, friendly expression, high quality 3D render style.";
-        const res = await fetch("/api/generate-image", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: `3D stylized character: ${prompt}` })
-        });
-        
-        if (!res.ok) throw new Error("Failed to generate image");
-        
-        const data = await res.json();
-        if (isMounted && data.b64_json) {
-          setAvatarUrl(`data:image/png;base64,${data.b64_json}`);
-        }
-      } catch (err) {
-        console.error("Avatar Gen Error:", err);
-        // Fallback to a generic icon or color if image generation fails
-        if (isMounted) {
-          setAvatarUrl(null);
-        }
-      } finally {
-        if (isMounted) {
-          setIsGenerating(false);
-        }
-      }
-    }
-    getAvatar();
-    return () => { isMounted = false; };
-  }, [department]);
-
   const handleSpeak = async () => {
     if (!textToSpeak || isSpeaking) return;
     
@@ -107,9 +80,7 @@ export function AnimatedAvatar({ department, textToSpeak, onSpeakEnd }: AvatarPr
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="relative w-48 h-48 rounded-full overflow-hidden border-4 border-primary/20 bg-muted flex items-center justify-center shadow-xl">
-        {isGenerating ? (
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        ) : avatarUrl ? (
+        {avatarUrl ? (
           <motion.img 
             src={avatarUrl} 
             alt="Department Avatar"

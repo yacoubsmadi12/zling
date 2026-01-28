@@ -1,6 +1,6 @@
 import { db } from "./db";
-import { users, terms, quizzes, badges, userBadges, ldapSettings, rewards, userRewards, dailyContent, type User, type InsertUser, type Term, type InsertTerm, type Quiz, type InsertQuiz, type Badge, type InsertBadge, type UserBadge, type LdapSettings, type InsertLdapSettings, type Reward, type InsertReward, type UserReward } from "@shared/schema";
-import { eq, desc, sql, and } from "drizzle-orm";
+import { users, terms, quizzes, badges, userBadges, ldapSettings, rewards, userRewards, dailyContent, userLearnedTerms, type User, type InsertUser, type Term, type InsertTerm, type Quiz, type InsertQuiz, type Badge, type InsertBadge, type UserBadge, type LdapSettings, type InsertLdapSettings, type Reward, type InsertReward, type UserReward, type UserLearnedTerm } from "@shared/schema";
+import { eq, desc, sql, and, notInArray, inArray } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -45,6 +45,14 @@ export interface IStorage {
   createReward(reward: InsertReward): Promise<Reward>;
   awardReward(userId: number, rewardId: number): Promise<UserReward>;
   getUserRewards(userId: number): Promise<UserReward[]>;
+
+  // Learned Terms
+  getUserLearnedTerms(userId: number): Promise<UserLearnedTerm[]>;
+  getUserLearnedTermIds(userId: number): Promise<number[]>;
+  markTermAsLearned(userId: number, termId: number): Promise<UserLearnedTerm>;
+  hasUserLearnedTerm(userId: number, termId: number): Promise<boolean>;
+  getUnlearnedTermsForDepartment(userId: number, department: string): Promise<Term[]>;
+  getUserLearnedTermsWithDetails(userId: number): Promise<(UserLearnedTerm & { term: Term })[]>;
 
   // Session
   sessionStore: session.Store;
@@ -200,6 +208,59 @@ export class DatabaseStorage implements IStorage {
 
   async getUserRewards(userId: number): Promise<UserReward[]> {
     return db.select().from(userRewards).where(eq(userRewards.userId, userId));
+  }
+
+  // Learned Terms methods
+  async getUserLearnedTerms(userId: number): Promise<UserLearnedTerm[]> {
+    return db.select().from(userLearnedTerms).where(eq(userLearnedTerms.userId, userId)).orderBy(desc(userLearnedTerms.learnedAt));
+  }
+
+  async getUserLearnedTermIds(userId: number): Promise<number[]> {
+    const learned = await db.select({ termId: userLearnedTerms.termId }).from(userLearnedTerms).where(eq(userLearnedTerms.userId, userId));
+    return learned.map(l => l.termId);
+  }
+
+  async markTermAsLearned(userId: number, termId: number): Promise<UserLearnedTerm> {
+    // Check if already learned to avoid duplicates
+    const existing = await db.select().from(userLearnedTerms).where(
+      and(eq(userLearnedTerms.userId, userId), eq(userLearnedTerms.termId, termId))
+    );
+    if (existing.length > 0) {
+      return existing[0];
+    }
+    const [learned] = await db.insert(userLearnedTerms).values({ userId, termId }).returning();
+    return learned;
+  }
+
+  async hasUserLearnedTerm(userId: number, termId: number): Promise<boolean> {
+    const [existing] = await db.select().from(userLearnedTerms).where(
+      and(eq(userLearnedTerms.userId, userId), eq(userLearnedTerms.termId, termId))
+    );
+    return !!existing;
+  }
+
+  async getUnlearnedTermsForDepartment(userId: number, department: string): Promise<Term[]> {
+    const learnedIds = await this.getUserLearnedTermIds(userId);
+    if (learnedIds.length === 0) {
+      return db.select().from(terms).where(eq(terms.department, department));
+    }
+    return db.select().from(terms).where(
+      and(eq(terms.department, department), notInArray(terms.id, learnedIds))
+    );
+  }
+
+  async getUserLearnedTermsWithDetails(userId: number): Promise<(UserLearnedTerm & { term: Term })[]> {
+    const learnedTerms = await this.getUserLearnedTerms(userId);
+    if (learnedTerms.length === 0) return [];
+    
+    const termIds = learnedTerms.map(lt => lt.termId);
+    const termsList = await db.select().from(terms).where(inArray(terms.id, termIds));
+    const termsMap = new Map(termsList.map(t => [t.id, t]));
+    
+    return learnedTerms.map(lt => ({
+      ...lt,
+      term: termsMap.get(lt.termId)!
+    })).filter(lt => lt.term); // Filter out any with missing terms
   }
 }
 

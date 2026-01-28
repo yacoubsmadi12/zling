@@ -74,15 +74,28 @@ export async function registerRoutes(
       const department = user.department;
       const today = new Date().toISOString().split('T')[0];
 
-      // Check if content already exists for today
+      // Check if content already exists for today for this user
       const existingContent = await storage.getDailyContent(department, today);
       if (existingContent) {
         const term = (await storage.getTerms()).find(t => t.id === existingContent.termId);
+        // Mark as learned if not already
+        if (term) {
+          await storage.markTermAsLearned(user.id, term.id);
+        }
         return res.json({
           term,
           quiz: existingContent.quizData
         });
       }
+
+      // Get list of terms the user has already learned to avoid repetition
+      const learnedTermsWithDetails = await storage.getUserLearnedTermsWithDetails(user.id);
+      const learnedTermsList = learnedTermsWithDetails.map(lt => lt.term.term);
+      
+      // Create exclusion list for the prompt
+      const exclusionNote = learnedTermsList.length > 0 
+        ? `\n\nIMPORTANT: The user has already learned these terms, so DO NOT repeat any of them: ${learnedTermsList.join(", ")}.`
+        : "";
 
       // Generate new content using Gemini
       const prompt = `You are an expert in the ${department} department of a telecom operator. 
@@ -90,6 +103,7 @@ export async function registerRoutes(
       Provide the 'term', 'definition', and a 'example' sentence.
       2. Generate a set of 5 fun, Kahoot-style multiple choice questions about this term and related topics in ${department}. 
       For each question, provide: 'question', 'options' (array of 4), 'correctAnswer' (one of options), and 'funFact'.
+      ${exclusionNote}
       
       Format your response as a JSON object:
       {
@@ -121,6 +135,9 @@ export async function registerRoutes(
         quizData: data.quiz
       });
 
+      // Mark the new term as learned for this user
+      await storage.markTermAsLearned(user.id, newTerm.id);
+
       res.json({
         term: newTerm,
         quiz: data.quiz
@@ -129,6 +146,35 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Daily Content Gen Error:", error);
       res.status(500).json({ message: "Failed to generate daily content" });
+    }
+  });
+
+  // --- Learned Terms API ---
+
+  // Get all learned terms for the current user
+  app.get("/api/user/learned-terms", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const user = req.user as User;
+      const learnedTerms = await storage.getUserLearnedTermsWithDetails(user.id);
+      res.json(learnedTerms);
+    } catch (error) {
+      console.error("Error fetching learned terms:", error);
+      res.status(500).json({ message: "Failed to fetch learned terms" });
+    }
+  });
+
+  // Mark a term as learned
+  app.post("/api/user/learned-terms/:termId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const user = req.user as User;
+      const termId = parseInt(req.params.termId);
+      const learned = await storage.markTermAsLearned(user.id, termId);
+      res.json(learned);
+    } catch (error) {
+      console.error("Error marking term as learned:", error);
+      res.status(500).json({ message: "Failed to mark term as learned" });
     }
   });
 

@@ -83,6 +83,14 @@ export const dailyContent = pgTable("daily_content", {
   quizData: jsonb("quiz_data").notNull(), // Array of 5 questions
 });
 
+// Track which terms each user has learned to prevent repetition
+export const userLearnedTerms = pgTable("user_learned_terms", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  termId: integer("term_id").notNull(),
+  learnedAt: timestamp("learned_at").defaultNow(),
+});
+
 // Relations
 export const userRelations = relations(users, ({ many }) => ({
   quizzes: many(quizzes),
@@ -142,3 +150,4 @@ export type InsertLdapSettings = z.infer<typeof insertLdapSettingsSchema>;
 export type Reward = typeof rewards.$inferSelect;
 export type InsertReward = z.infer<typeof insertRewardSchema>;
 export type UserReward = typeof userRewards.$inferSelect;
+export type UserLearnedTerm = typeof userLearnedTerms.$inferSelect;

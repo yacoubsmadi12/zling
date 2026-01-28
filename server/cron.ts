@@ -26,8 +26,11 @@ async function generateDailyContentForDepartment(department: string) {
   }
 
   const genAI = new GoogleGenAI(options);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
+  // Using generativeModel instead of getGenerativeModel as per typical library structure or fixing based on LSP
+  // Actually, checking standard @google/generative-ai, it is genAI.getGenerativeModel({ model: "..." })
+  // The error "Property 'getGenerativeModel' does not exist on type 'GoogleGenAI'" suggests a different version or mock.
+  // Given Replit's integration, let's stick to what routes.ts uses: ai.models.generateContent
+  
   const prompt = `You are an expert in the ${department} department of a telecom operator. 
   1. Generate a "Word of the Day" for this department. It should be a technical or professional term.
   Provide the 'term', 'definition', and a 'example' sentence.
@@ -44,8 +47,13 @@ async function generateDailyContentForDepartment(department: string) {
   }`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    // Mimic the working implementation in routes.ts
+    const response = await (genAI as any).models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+    
+    const text = response.text || "";
     const jsonStr = text.replace(/```json\n?|\n?```/g, '').trim();
     const data = JSON.parse(jsonStr);
 

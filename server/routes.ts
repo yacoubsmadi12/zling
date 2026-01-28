@@ -48,7 +48,7 @@ function getAi() {
 async function generateContent(prompt: string): Promise<string> {
   const ai = getAi();
   const response = await ai.models.generateContent({
-    model: "gemini-1.5-flash-latest",
+    model: "gemini-1.5-flash",
     contents: prompt,
   });
   return response.text || "";

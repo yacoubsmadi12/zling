@@ -213,16 +213,18 @@ export default function QuizRunner() {
           <div className="w-24 h-24 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <Trophy className="w-12 h-12 text-yellow-600" />
           </div>
-          <h2 className="text-3xl font-display font-bold mb-2">Quiz Complete!</h2>
-          <p className="text-muted-foreground mb-8">You scored</p>
-          <div className="text-6xl font-bold text-primary mb-8">{score}</div>
+          <h2 className="text-3xl font-display font-bold mb-2">Game Over!</h2>
+          <p className="text-muted-foreground mb-8">Final Score</p>
+          <div className="text-7xl font-bold text-primary mb-8 drop-shadow-lg">{score}</div>
           
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Button onClick={() => window.location.reload()} className="py-6 text-lg rounded-xl h-auto">
+              Try Again
+            </Button>
             <Link href="/quiz">
-              <Button className="w-full py-6 text-lg rounded-xl">Play Again</Button>
-            </Link>
-            <Link href="/">
-              <Button variant="outline" className="w-full py-6 text-lg rounded-xl">Back to Dashboard</Button>
+              <Button variant="outline" className="w-full py-6 text-lg rounded-xl h-auto">
+                Exit
+              </Button>
             </Link>
           </div>
         </motion.div>
@@ -231,118 +233,181 @@ export default function QuizRunner() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background pb-20 md:pb-0">
+    <div className="flex min-h-screen bg-background pb-20 md:pb-0 overflow-hidden">
       <Navigation />
       
-      <main className="flex-1 md:ml-64 p-4 md:p-8 flex flex-col items-center justify-center min-h-[80vh]">
-        <div className="max-w-2xl w-full space-y-8">
+      <main className="flex-1 md:ml-64 p-4 md:p-8 flex flex-col items-center justify-center min-h-screen relative">
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <motion.div 
+            animate={{ 
+              rotate: [0, 360],
+              scale: [1, 1.2, 1],
+              x: [0, 100, 0],
+              y: [0, 50, 0]
+            }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            className="absolute -top-20 -left-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl"
+          />
+          <motion.div 
+            animate={{ 
+              rotate: [360, 0],
+              scale: [1, 1.5, 1],
+              x: [0, -100, 0],
+              y: [0, -50, 0]
+            }}
+            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+            className="absolute -bottom-20 -right-20 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl"
+          />
+        </div>
+
+        <div className="max-w-4xl w-full space-y-8 relative z-10">
           
-          {/* Progress Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex flex-col">
-              <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Question {questionCount + 1}/5</span>
-              <h1 className="text-xl font-bold capitalize">{mode?.replace('-', ' ')}</h1>
-            </div>
+          {/* Game HUD */}
+          <div className="flex items-center justify-between bg-card/80 backdrop-blur-md p-4 rounded-2xl border-2 border-primary/10 shadow-lg">
             <div className="flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-full border-4 flex items-center justify-center font-bold text-xl ${timeLeft < 5 ? 'border-red-500 text-red-500 animate-pulse' : 'border-primary text-primary'}`}>
-                {timeLeft}
+              <div className="p-3 bg-primary/10 rounded-xl">
+                <Trophy className="w-6 h-6 text-primary" />
               </div>
-              <div className="bg-primary/10 text-primary px-4 py-2 rounded-lg font-bold">
-                {score} pts
+              <div>
+                <span className="text-xs font-bold text-muted-foreground uppercase">Score</span>
+                <div className="text-2xl font-black text-primary tabular-nums">{score}</div>
               </div>
+            </div>
+
+            <div className="flex flex-col items-center gap-1">
+               <div className={`text-4xl font-black tabular-nums transition-colors ${timeLeft < 10 ? 'text-red-500 animate-bounce' : 'text-foreground'}`}>
+                {timeLeft}s
+              </div>
+              <Progress value={(timeLeft / (mode === 'word-rush' ? 60 : 15)) * 100} className="w-32 h-2" />
+            </div>
+
+            <div className="flex items-center gap-4 text-right">
+              <div>
+                <span className="text-xs font-bold text-muted-foreground uppercase">Progress</span>
+                <div className="text-xl font-bold">{questionCount + 1}<span className="text-sm opacity-50">/50</span></div>
+              </div>
+              {mode === 'survival' && (
+                 <div className="flex gap-1">
+                   {[1, 2, 3].map(i => (
+                     <motion.div 
+                       key={i}
+                       animate={{ scale: [1, 1.2, 1] }}
+                       transition={{ duration: 0.5, delay: i * 0.1, repeat: Infinity }}
+                       className="w-6 h-6 text-red-500 fill-current"
+                     >
+                       <Trophy className="w-full h-full fill-red-500" />
+                     </motion.div>
+                   ))}
+                 </div>
+              )}
             </div>
           </div>
 
-          <Progress value={(questionCount / 5) * 100} className="h-2" />
-
-          {/* Question Card */}
+          {/* Game Area */}
           <AnimatePresence mode="wait">
             {isLoadingQuestion || !currentQuestion ? (
-              <div className="h-64 flex items-center justify-center">
-                <Loader />
+              <div className="h-96 flex items-center justify-center">
+                <div className="relative">
+                  <div className="w-24 h-24 border-8 border-primary/10 border-t-primary rounded-full animate-spin" />
+                  <div className="absolute inset-0 flex items-center justify-center font-black text-primary">GO!</div>
+                </div>
               </div>
             ) : (
               <motion.div
                 key={questionCount}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.05 }}
-                className="space-y-8"
+                initial={{ x: 300, opacity: 0, rotateY: 90 }}
+                animate={{ x: 0, opacity: 1, rotateY: 0 }}
+                exit={{ x: -300, opacity: 0, rotateY: -90 }}
+                transition={{ type: "spring", damping: 15 }}
+                className="space-y-12"
               >
-                <div className="bg-card p-10 rounded-3xl shadow-xl border-b-8 border-primary/20">
-                  <h2 className="text-3xl font-bold leading-relaxed text-center font-display">
+                {/* Question Display */}
+                <div className="bg-card p-12 rounded-[2rem] shadow-2xl border-4 border-primary/5 relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+                  <motion.h2 
+                    initial={{ scale: 0.9 }}
+                    animate={{ scale: 1 }}
+                    className="text-4xl md:text-5xl font-black leading-tight text-center font-display drop-shadow-sm"
+                  >
                     {currentQuestion.question}
-                  </h2>
+                  </motion.h2>
+                  
+                  {currentQuestion.term && (
+                    <div className="mt-8 flex justify-center">
+                      <div className="px-6 py-2 bg-primary/10 rounded-full text-primary font-bold text-sm uppercase tracking-widest border border-primary/20">
+                        Vocabulary: {currentQuestion.term}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Options Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-4">
                   {currentQuestion.options.map((option: string, idx: number) => {
                     const isSelected = selectedOption === option;
                     const isCorrectAnswer = option === currentQuestion.correctAnswer;
-                    const colors = ["bg-blue-500", "bg-red-500", "bg-yellow-500", "bg-green-500"];
-                    const icons = [
-                      <div key="1" className="w-6 h-6 border-2 border-white rotate-45" />,
-                      <div key="2" className="w-6 h-6 border-2 border-white rounded-full" />,
-                      <div key="3" className="w-6 h-6 border-2 border-white" />,
-                      <div key="4" className="w-6 h-6 border-2 border-white rounded-sm skew-x-12" />
+                    const nintendoColors = [
+                      "from-red-500 to-red-600 shadow-[0_8px_0_rgb(185,28,28)] active:shadow-none active:translate-y-2",
+                      "from-blue-500 to-blue-600 shadow-[0_8px_0_rgb(29,78,216)] active:shadow-none active:translate-y-2",
+                      "from-green-500 to-green-600 shadow-[0_8px_0_rgb(21,128,61)] active:shadow-none active:translate-y-2",
+                      "from-yellow-400 to-yellow-500 shadow-[0_8px_0_rgb(161,98,7)] active:shadow-none active:translate-y-2"
                     ];
-
-                    let buttonStyle = `${colors[idx]} text-white hover:brightness-110 shadow-lg translate-y-0`;
+                    
+                    let statusClass = "";
                     if (selectedOption) {
-                      if (isSelected) {
-                        buttonStyle = isCorrect 
-                          ? "bg-green-600 ring-4 ring-green-400 scale-105 z-10"
-                          : "bg-red-600 opacity-100 scale-95 grayscale-0";
-                      } else if (isCorrectAnswer) {
-                        buttonStyle = "bg-green-600 scale-105 z-10";
-                      } else {
-                        buttonStyle = "opacity-20 scale-90 grayscale";
-                      }
+                      if (isCorrectAnswer) statusClass = "ring-8 ring-green-400 scale-105 z-20 !opacity-100 brightness-110";
+                      else if (isSelected) statusClass = "ring-8 ring-red-400 scale-95 opacity-80 brightness-75";
+                      else statusClass = "opacity-20 scale-90 grayscale blur-[1px]";
                     }
 
                     return (
                       <motion.button
                         key={idx}
-                        whileHover={!selectedOption ? { scale: 1.02, translateY: -4 } : {}}
-                        whileTap={!selectedOption ? { scale: 0.98 } : {}}
+                        whileHover={!selectedOption ? { translateY: -8, scale: 1.02 } : {}}
+                        whileTap={!selectedOption ? { translateY: 4, scale: 0.98 } : {}}
                         onClick={() => handleAnswer(option)}
                         disabled={!!selectedOption}
-                        className={`
-                          p-8 rounded-2xl text-left font-bold text-xl transition-all duration-300
-                          flex items-center gap-4 relative overflow-hidden
-                          ${buttonStyle}
-                        `}
+                        className={cn(
+                          "relative group p-8 rounded-3xl text-left font-black text-2xl text-white transition-all duration-300",
+                          "bg-gradient-to-b flex items-center gap-6 overflow-hidden min-h-[140px]",
+                          nintendoColors[idx],
+                          statusClass
+                        )}
                       >
-                        <div className="flex-shrink-0 opacity-50">
-                          {icons[idx]}
+                        {/* Nintendo Button Decor */}
+                        <div className="absolute top-4 right-4 w-12 h-12 bg-white/10 rounded-full flex items-center justify-center font-black text-4xl opacity-20">
+                          {['A', 'B', 'X', 'Y'][idx]}
                         </div>
-                        <span className="flex-1">{option}</span>
-                        {selectedOption && isSelected && (
-                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                            {isCorrect 
-                              ? <CheckCircle2 className="w-8 h-8 text-white" />
-                              : <XCircle className="w-8 h-8 text-white" />
-                            }
-                          </motion.div>
-                        )}
-                        {selectedOption && isCorrectAnswer && !isSelected && (
-                          <CheckCircle2 className="w-8 h-8 text-white" />
-                        )}
+                        
+                        <div className="relative z-10 flex-1 drop-shadow-md">
+                          {option}
+                        </div>
+
+                        <AnimatePresence>
+                          {selectedOption && isCorrectAnswer && (
+                            <motion.div 
+                              initial={{ scale: 0, rotate: -45 }}
+                              animate={{ scale: 1, rotate: 0 }}
+                              className="absolute inset-0 bg-green-500/20 backdrop-blur-[2px] flex items-center justify-center"
+                            >
+                              <CheckCircle2 className="w-20 h-20 text-white drop-shadow-xl" />
+                            </motion.div>
+                          )}
+                          {selectedOption && isSelected && !isCorrect && (
+                            <motion.div 
+                              initial={{ scale: 0, rotate: 45 }}
+                              animate={{ scale: 1, rotate: 0 }}
+                              className="absolute inset-0 bg-red-500/20 backdrop-blur-[2px] flex items-center justify-center"
+                            >
+                              <XCircle className="w-20 h-20 text-white drop-shadow-xl" />
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </motion.button>
                     );
                   })}
                 </div>
-                
-                {selectedOption && currentQuestion.funFact && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-primary/5 p-6 rounded-2xl border-2 border-primary/10 text-center"
-                  >
-                    <p className="text-sm font-bold text-primary uppercase mb-2">Did you know?</p>
-                    <p className="text-lg italic text-muted-foreground">"{currentQuestion.funFact}"</p>
-                  </motion.div>
-                )}
               </motion.div>
             )}
           </AnimatePresence>

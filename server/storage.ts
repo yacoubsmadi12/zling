@@ -54,6 +54,9 @@ export interface IStorage {
   getUnlearnedTermsForDepartment(userId: number, department: string): Promise<Term[]>;
   getUserLearnedTermsWithDetails(userId: number): Promise<(UserLearnedTerm & { term: Term })[]>;
 
+  // Cron specific
+  getUniqueDepartments(): Promise<string[]>;
+
   // Session
   sessionStore: session.Store;
 }
@@ -66,6 +69,11 @@ export class DatabaseStorage implements IStorage {
       pool,
       createTableIfMissing: true,
     });
+  }
+
+  async getUniqueDepartments(): Promise<string[]> {
+    const result = await db.selectDistinct({ department: users.department }).from(users);
+    return result.map(r => r.department);
   }
 
   // User methods

@@ -33,7 +33,7 @@ function getAi() {
     };
 
     // Apply Replit AI Integrations settings if using them
-    if (!process.env.GOOGLE_API_KEY && process.env.AI_INTEGRATIONS_GEMINI_BASE_URL) {
+    if (key === process.env.AI_INTEGRATIONS_GEMINI_API_KEY && process.env.AI_INTEGRATIONS_GEMINI_BASE_URL) {
       options.httpOptions = {
         apiVersion: "",
         baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,

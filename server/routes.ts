@@ -439,27 +439,7 @@ async function seedData() {
     console.log("Seeded employee user");
   }
 
-  const existingTerms = await storage.getTerms();
-  if (existingTerms.length === 0) {
-    const termsData = [
-      { term: "Finance Definition", definition: "Management of money and includes activities such as investing, borrowing, lending, budgeting, saving, and forecasting.", example: "The finance department is reviewing the budget.", department: "Finance" },
-      { term: "Human Resources", definition: "The department of a business or organization that deals with the hiring, administration, and training of personnel.", example: "HR is organizing a training workshop.", department: "Human Resources" },
-      { term: "Engineering", definition: "The branch of science and technology concerned with the design, building, and use of engines, machines, and structures.", example: "Our engineering team is developing a new feature.", department: "Engineering" },
-      { term: "Marketing", definition: "The action or business of promoting and selling products or services, including market research and advertising.", example: "Marketing launched a new campaign.", department: "Marketing" },
-      { term: "Sales", definition: "The exchange of a commodity for money; the action of selling something.", example: "Sales reached their target this month.", department: "Sales" },
-      { term: "GRC", definition: "Governance, Risk management, and Compliance.", example: "We follow strict GRC protocols.", department: "Governance, Risk, and Compliance" },
-      { term: "B2C", definition: "Business-to-Consumer.", example: "Our consumer business segment focuses on B2C sales.", department: "Consumer Business" },
-      { term: "Regulation", definition: "A rule or directive made and maintained by an authority.", example: "Legal ensures we follow every regulation.", department: "Legal and Regulatory" },
-      { term: "Innovation", definition: "A new method, idea, product, etc.", example: "The digital innovation team is exploring AI.", department: "Technology & Digital Innovation" },
-      { term: "Sustainability", definition: "The ability to be maintained at a certain rate or level.", example: "Sustainability is a core corporate value.", department: "Corporate Communications & Sustainability" },
-      { term: "Machine Learning", definition: "A type of artificial intelligence (AI) that allows software applications to become more accurate at predicting outcomes without being explicitly programmed to do so.", example: "We use machine learning to predict customer churn.", department: "Data Analytics and AI" },
-    ];
-
-    for (const t of termsData) {
-      await storage.createTerm(t);
-    }
-    console.log("Seeded terms");
-  }
+  // Terms are now generated dynamically via Gemini API - no seed data needed
 
   const existingBadges = await storage.getBadges();
   if (existingBadges.length === 0) {

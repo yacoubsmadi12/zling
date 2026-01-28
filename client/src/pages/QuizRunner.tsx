@@ -109,11 +109,12 @@ export default function QuizRunner() {
     if (questionCache[nextIdx]) {
       setCurrentQuestion(questionCache[nextIdx]);
       setQuestionCount(nextIdx);
-    } else if (mode === 'word-rush' || mode === 'ai-duel' || mode === 'survival') {
-      // Fetch more for infinite modes
+    } else if (mode === 'word-rush' || mode === 'ai-duel' || mode === 'survival' || mode === 'boss-fight') {
+      // Fetch more for infinite modes or specialized ones
       try {
+        const difficulty = mode === 'boss-fight' ? "hard" : "medium";
         const q = await fetchQuestion({ 
-          difficulty: mode === 'boss-fight' ? "hard" : "medium", 
+          difficulty, 
           topic: undefined 
         });
         setQuestionCache(prev => [...prev, q]);

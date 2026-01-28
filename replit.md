@@ -39,6 +39,7 @@ Preferred communication style: Simple, everyday language.
 - **Quizzes**: Quiz history tracking with type, score, and timestamps
 - **Badges**: Achievement system with conditions for earning
 - **UserBadges**: Junction table for user-badge relationships
+- **UserLearnedTerms**: Tracks which terms each user has learned (prevents repetition in daily content)
 - **Conversations/Messages**: Chat history for AI integrations
 
 ### Application Features
@@ -96,5 +97,6 @@ shared/               # Shared code between client and server
 ### Environment Variables Required
 - `DATABASE_URL`: PostgreSQL connection string
 - `SESSION_SECRET`: Secret for session encryption (defaults to "zlingo_secret")
+- `GOOGLE_API_KEY`: Google Gemini API key for daily vocabulary generation
 - `AI_INTEGRATIONS_OPENAI_API_KEY`: OpenAI API key for AI features
 - `AI_INTEGRATIONS_OPENAI_BASE_URL`: OpenAI API base URL

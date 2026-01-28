@@ -1,13 +1,21 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Navigation } from "@/components/Navigation";
 import { StatCard } from "@/components/StatCard";
-import { Trophy, Flame, Zap, Target, ArrowRight, User as UserIcon, BookOpen, Brain } from "lucide-react";
+import { Trophy, Flame, Zap, Target, ArrowRight, User as UserIcon, BookOpen, Brain, Info } from "lucide-react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { User, Quiz } from "@shared/schema";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -149,11 +157,88 @@ export default function Dashboard() {
               </h1>
               <p className="text-muted-foreground mt-1">Ready to master your telecom lingo today?</p>
             </div>
-            <div className="flex items-center gap-2 bg-white dark:bg-zinc-800 p-2 rounded-full border shadow-sm pr-4">
-              <div className="w-8 h-8 rounded-full bg-secondary/20 flex items-center justify-center text-secondary font-bold">
-                {user.department[0]}
+            <div className="flex items-center gap-4">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <button className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-full font-bold hover:bg-primary/20 transition-all hover-elevate">
+                    <Info className="w-4 h-4" />
+                    Rewards Guide
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md rounded-3xl">
+                  <DialogHeader>
+                    <DialogTitle className="text-2xl font-display font-bold flex items-center gap-2">
+                      <Trophy className="w-6 h-6 text-primary" />
+                      Z-Points & Rewards
+                    </DialogTitle>
+                    <DialogDescription className="text-base pt-4">
+                      Maximize your learning and earn exclusive prizes from HR by accumulating Z-Points!
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-6 py-4">
+                    <div className="space-y-3">
+                      <h3 className="font-bold text-lg flex items-center gap-2">
+                        <Zap className="w-5 h-5 text-yellow-500" />
+                        How to earn points:
+                      </h3>
+                      <ul className="grid gap-2 text-sm">
+                        <li className="flex justify-between items-center p-2 bg-muted/50 rounded-lg">
+                          <span>Daily Login</span>
+                          <span className="font-bold text-primary">+5 pts</span>
+                        </li>
+                        <li className="flex justify-between items-center p-2 bg-muted/50 rounded-lg">
+                          <span>View Department Terms</span>
+                          <span className="font-bold text-primary">+5 pts</span>
+                        </li>
+                        <li className="flex justify-between items-center p-2 bg-muted/50 rounded-lg">
+                          <span>Listen to Avatar (TTS)</span>
+                          <span className="font-bold text-primary">+5 pts</span>
+                        </li>
+                        <li className="flex justify-between items-center p-2 bg-muted/50 rounded-lg">
+                          <span>Main Quiz Completion</span>
+                          <span className="font-bold text-primary">+10 pts</span>
+                        </li>
+                        <li className="flex justify-between items-center p-2 bg-muted/50 rounded-lg">
+                          <span>Additional Practice Quiz</span>
+                          <span className="font-bold text-primary">+5 pts</span>
+                        </li>
+                      </ul>
+                    </div>
+                    
+                    <div className="space-y-3 pt-2">
+                      <h3 className="font-bold text-lg flex items-center gap-2">
+                        <Target className="w-5 h-5 text-secondary" />
+                        Badge Milestones:
+                      </h3>
+                      <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                        <div className="p-2 border rounded-xl bg-card">
+                          <div className="font-bold text-primary">300 pts</div>
+                          <div className="text-muted-foreground">Shield</div>
+                        </div>
+                        <div className="p-2 border rounded-xl bg-card">
+                          <div className="font-bold text-primary">500 pts</div>
+                          <div className="text-muted-foreground">Med. Shield</div>
+                        </div>
+                        <div className="p-2 border rounded-xl bg-card">
+                          <div className="font-bold text-primary">1000 pts</div>
+                          <div className="text-muted-foreground">Bronze Shield</div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <p className="text-xs text-center text-muted-foreground italic bg-secondary/5 p-3 rounded-xl border border-secondary/10">
+                      Note: The HR team distributes annual prizes to the top point earners on the leaderboard. Keep learning!
+                    </p>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <div className="flex items-center gap-2 bg-white dark:bg-zinc-800 p-2 rounded-full border shadow-sm pr-4">
+                <div className="w-8 h-8 rounded-full bg-secondary/20 flex items-center justify-center text-secondary font-bold">
+                  {user.department[0]}
+                </div>
+                <span className="font-medium text-sm">{user.department} Dept.</span>
               </div>
-              <span className="font-medium text-sm">{user.department} Dept.</span>
             </div>
           </div>
 

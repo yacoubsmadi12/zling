@@ -31,7 +31,7 @@ export default function Profile() {
     return <Award className="w-8 h-8 text-primary" />;
   };
 
-  if (!user) return null;
+  const generateAvatarMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/user/generate-avatar");
       return res.json();

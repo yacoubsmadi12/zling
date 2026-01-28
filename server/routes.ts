@@ -272,11 +272,14 @@ export async function registerRoutes(
     try {
       const input = api.quizzes.create.input.parse(req.body);
       const quiz = await storage.createQuiz(input);
+      const user = req.user as User;
       
       if (quiz.score > 0) {
-        await storage.updateUserStats((req.user as User).id, quiz.score, 1);
+        // Award 10 points for completing a quiz
+        await storage.addPoints(user.id, 10, "Quiz completed");
+        await storage.updateUserStats(user.id, quiz.score, 1);
       } else {
-         await storage.updateUserStats((req.user as User).id, 0, 0);
+         await storage.updateUserStats(user.id, 0, 0);
       }
 
       res.status(201).json(quiz);
@@ -354,6 +357,9 @@ export async function registerRoutes(
       const { text } = req.body;
       if (!text) return res.status(400).send("Text is required");
       
+      const user = req.user as User;
+      await storage.addPoints(user.id, 5, "Listened to text");
+
       const { textToSpeech } = await import("./replit_integrations/audio/client");
       const audioBuffer = await textToSpeech(text);
       res.set("Content-Type", "audio/wav");

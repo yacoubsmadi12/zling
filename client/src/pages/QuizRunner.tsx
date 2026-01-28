@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { CheckCircle2, XCircle, ArrowRight, Trophy } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function QuizRunner() {
   const { mode } = useParams(); // 'ai-duel' or 'daily'
@@ -94,6 +95,16 @@ export default function QuizRunner() {
       score: finalScore,
       userId: 0, // Backend handles user ID from session
     });
+    
+    // Award 5 points for additional quiz (non-daily) or 10 points for regular quiz completion
+    // The points are awarded in the backend route, but we can add an extra trigger here if needed
+    // In our case, the backend already adds 10 points on /api/quizzes creation if score > 0
+    // We add 5 extra points specifically for "additional" quizzes if it's not the daily one
+    if (mode !== 'daily' && finalScore > 0) {
+      apiRequest("POST", "/api/user/points", { points: 5, reason: "Additional quiz completed" })
+        .then(() => queryClient.invalidateQueries({ queryKey: ["/api/user"] }));
+    }
+
     if (finalScore >= 40) {
       confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 } });
     }

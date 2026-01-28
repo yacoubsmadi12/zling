@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { CheckCircle2, XCircle, ArrowRight, Trophy } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { cn } from "@/lib/utils";
 
 export default function QuizRunner() {
   const { mode } = useParams(); // 'ai-duel', 'daily', 'word-rush', 'listen-tap', 'survival', 'boss-fight'

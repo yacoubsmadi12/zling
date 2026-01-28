@@ -75,6 +75,44 @@ export default function QuizRunner() {
           const data = await res.json();
           setQuestionCache(data.quiz);
           setCurrentQuestion(data.quiz[0]);
+        } else if (['word-rush', 'listen-tap', 'survival', 'boss-fight', 'match-meaning'].includes(mode || "")) {
+          const endpoint = mode === 'listen-tap' ? 'audio-tap' : mode;
+          const res = await fetch(`/api/games/${endpoint}`);
+          if (!res.ok) throw new Error("Failed to fetch game content");
+          const data = await res.json();
+          
+          let formattedQuestions = data;
+          if (['word-rush', 'survival', 'boss-fight', 'listen-tap'].includes(mode || "")) {
+            formattedQuestions = data.map((term: any) => {
+              const distractors = data
+                .filter((t: any) => t.id !== term.id)
+                .sort(() => 0.5 - Math.random())
+                .slice(0, 3)
+                .map((t: any) => t.definition);
+              
+              const options = [term.definition, ...distractors].sort(() => 0.5 - Math.random());
+              
+              return {
+                id: term.id,
+                question: mode === 'listen-tap' ? "What did you hear?" : `What is the meaning of "${term.term}"?`,
+                term: term.term,
+                options,
+                correctAnswer: term.definition,
+                funFact: term.example
+              };
+            });
+          } else if (mode === 'match-meaning') {
+            formattedQuestions = data.map((q: any) => ({
+              id: q.id,
+              question: `Match the meaning for: ${q.word}`,
+              options: q.options,
+              correctAnswer: q.correctMeaning,
+              funFact: "Great job! Keep going."
+            }));
+          }
+          
+          setQuestionCache(formattedQuestions);
+          setCurrentQuestion(formattedQuestions[0]);
         } else {
           // Prefetch first batch
           const res = await fetch("/api/ai/quiz-game", {
@@ -95,38 +133,20 @@ export default function QuizRunner() {
       }
     };
     initQuiz();
-  }, []);
+  }, [mode, department]);
 
   const loadNewQuestion = async () => {
     const nextIdx = questionCount + 1;
-    const maxQuestions = (mode === 'boss-fight') ? 10 : 5;
+    const isInfinite = ['word-rush', 'survival'].includes(mode || "");
+    const maxQuestions = mode === 'boss-fight' ? 10 : (isInfinite ? 50 : 5);
     
-    if (mode !== 'word-rush' && nextIdx >= maxQuestions) {
+    if (nextIdx >= maxQuestions || nextIdx >= questionCache.length) {
       finishGame(score);
       return;
     }
 
-    if (questionCache[nextIdx]) {
-      setCurrentQuestion(questionCache[nextIdx]);
-      setQuestionCount(nextIdx);
-    } else if (mode === 'word-rush' || mode === 'ai-duel' || mode === 'survival' || mode === 'boss-fight') {
-      // Fetch more for infinite modes or specialized ones
-      try {
-        const difficulty = mode === 'boss-fight' ? "hard" : "medium";
-        const q = await fetchQuestion({ 
-          difficulty, 
-          topic: undefined 
-        });
-        setQuestionCache(prev => [...prev, q]);
-        setCurrentQuestion(q);
-        setQuestionCount(nextIdx);
-      } catch (err) {
-        toast({ title: "Error", description: "Failed to load more questions", variant: "destructive" });
-      }
-    } else {
-      setGameOver(true);
-    }
-
+    setCurrentQuestion(questionCache[nextIdx]);
+    setQuestionCount(nextIdx);
     setSelectedOption(null);
     setIsCorrect(null);
     if (mode !== 'word-rush') {
@@ -143,7 +163,7 @@ export default function QuizRunner() {
 
     if (correct) {
       const timeBonus = mode === 'word-rush' ? 0 : Math.floor(timeLeft * 2);
-      setScore(s => s + 10 + timeBonus);
+      setScore(s => s + (mode === 'word-rush' ? 1 : 10 + timeBonus));
       confetti({ 
         particleCount: 100, 
         spread: 70, 

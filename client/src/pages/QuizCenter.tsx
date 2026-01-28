@@ -40,13 +40,23 @@ const miniGames = [
     desc: "Score as many correct words as possible in 60s.",
     icon: Zap,
     color: "from-yellow-400 to-orange-500",
-    points: "2x Points",
+    points: "1pt/word",
     badge: "Flash Speed",
     href: "/quiz/word-rush"
   },
   {
+    id: "match-meaning",
+    title: "Match the Meaning",
+    desc: "Choose the correct meaning from 3 options.",
+    icon: Brain,
+    color: "from-indigo-400 to-purple-500",
+    points: "10 Points",
+    badge: "Master Mind",
+    href: "/quiz/match-meaning"
+  },
+  {
     id: "listen-tap",
-    title: "Listen & Tap",
+    title: "Audio Tap",
     desc: "Hear a word and quickly choose its meaning.",
     icon: Volume2,
     color: "from-cyan-400 to-blue-500",

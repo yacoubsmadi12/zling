@@ -20,17 +20,17 @@ import { useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 const departments = [
-  { id: "Finance", icon: Wallet, color: "bg-emerald-100 text-emerald-600", desc: "Banking, accounts, and financial management." },
-  { id: "Human Resources", icon: Users, color: "bg-green-100 text-green-600", desc: "Talent, culture, and organizational dev." },
-  { id: "Engineering", icon: Code2, color: "bg-purple-100 text-purple-600", desc: "Technical specs, protocols, and networks." },
-  { id: "Marketing", icon: Megaphone, color: "bg-pink-100 text-pink-600", desc: "Campaigns, reach, and branding terms." },
-  { id: "Sales", icon: Briefcase, color: "bg-blue-100 text-blue-600", desc: "Negotiation, pipelines, and closing deals." },
-  { id: "Governance, Risk, and Compliance", icon: ShieldCheck, color: "bg-slate-100 text-slate-600", desc: "Regulations, risk management, and compliance." },
-  { id: "Consumer Business", icon: ShoppingBag, color: "bg-orange-100 text-orange-600", desc: "Retail, consumer behavior, and business models." },
-  { id: "Legal and Regulatory", icon: Scale, color: "bg-amber-100 text-amber-600", desc: "Compliance, contracts, and regulations." },
-  { id: "Technology & Digital Innovation", icon: Cpu, color: "bg-cyan-100 text-cyan-600", desc: "Cutting-edge tech and digital transformation." },
-  { id: "Corporate Communications & Sustainability", icon: MessageSquareShare, color: "bg-teal-100 text-teal-600", desc: "External relations and ESG initiatives." },
-  { id: "Data Analytics and AI", icon: Code2, color: "bg-indigo-100 text-indigo-600", desc: "Big data, machine learning, and AI insights." },
+  { id: "Finance", icon: Wallet, color: "bg-emerald-500 text-white", desc: "Banking, accounts, and financial management." },
+  { id: "Human Resources", icon: Users, color: "bg-green-500 text-white", desc: "Talent, culture, and organizational dev." },
+  { id: "Engineering", icon: Code2, color: "bg-red-500 text-white", desc: "Technical specs, protocols, and networks." },
+  { id: "Marketing", icon: Megaphone, color: "bg-pink-500 text-white", desc: "Campaigns, reach, and branding terms." },
+  { id: "Sales", icon: Briefcase, color: "bg-blue-500 text-white", desc: "Negotiation, pipelines, and closing deals." },
+  { id: "Governance, Risk, and Compliance", icon: ShieldCheck, color: "bg-slate-600 text-white", desc: "Regulations, risk management, and compliance." },
+  { id: "Consumer Business", icon: ShoppingBag, color: "bg-orange-500 text-white", desc: "Retail, consumer behavior, and business models." },
+  { id: "Legal and Regulatory", icon: Scale, color: "bg-amber-600 text-white", desc: "Compliance, contracts, and regulations." },
+  { id: "Technology & Digital Innovation", icon: Cpu, color: "bg-cyan-500 text-white", desc: "Cutting-edge tech and digital transformation." },
+  { id: "Corporate Communications & Sustainability", icon: MessageSquareShare, color: "bg-teal-500 text-white", desc: "External relations and ESG initiatives." },
+  { id: "Data Analytics and AI", icon: Code2, color: "bg-indigo-600 text-white", desc: "Big data, machine learning, and AI insights." },
 ];
 
 export default function Learn() {
@@ -81,7 +81,7 @@ export default function Learn() {
                     )}
                     <Link href={`/flashcards/${dept.id}`} className="absolute inset-0 z-10" />
                     <div className="flex items-start gap-4">
-                      <div className={cn("p-4 rounded-xl", dept.color, "group-hover:scale-110 transition-transform duration-300")}>
+                      <div className={cn("p-4 rounded-xl shadow-lg shadow-black/5", dept.color, "group-hover:scale-110 transition-transform duration-300")}>
                         <dept.icon className="w-8 h-8" />
                       </div>
                       <div>

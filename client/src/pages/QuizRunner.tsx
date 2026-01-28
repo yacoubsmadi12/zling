@@ -20,6 +20,7 @@ export default function QuizRunner() {
   const department = new URLSearchParams(search).get("department");
 
   const [currentQuestion, setCurrentQuestion] = useState<any>(null);
+  const [questionCache, setQuestionCache] = useState<any[]>([]);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [score, setScore] = useState(0);
@@ -30,15 +31,13 @@ export default function QuizRunner() {
 
   // Timer logic for Word Rush
   useEffect(() => {
-    if (gameOver || isPaused) return;
+    if (gameOver || isPaused || mode !== 'word-rush') return;
     
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timer);
-          if (mode === 'word-rush') {
-            finishGame(score);
-          }
+          finishGame(score);
           return 0;
         }
         return prev - 1;
@@ -46,46 +45,96 @@ export default function QuizRunner() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [gameOver, isPaused, mode]);
+  }, [gameOver, isPaused, mode, score]);
 
-  // Load initial question
+  // General Timer logic for other modes
   useEffect(() => {
-    loadNewQuestion();
+    if (gameOver || isPaused || mode === 'word-rush') return;
+    
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          // Time's up for a single question
+          handleAnswer(""); // Treat as wrong answer
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [gameOver, isPaused, mode, currentQuestion]);
+
+  // Load initial questions
+  useEffect(() => {
+    const initQuiz = async () => {
+      try {
+        if (mode === 'daily') {
+          const res = await fetch(`/api/ai/daily-content?department=${encodeURIComponent(department || "")}`);
+          if (!res.ok) throw new Error("Failed to fetch daily content");
+          const data = await res.json();
+          setQuestionCache(data.quiz);
+          setCurrentQuestion(data.quiz[0]);
+        } else {
+          // Prefetch first batch
+          const res = await fetch("/api/ai/quiz-game", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+              topic: department || "telecom",
+              difficulty: mode === 'boss-fight' ? 'hard' : 'medium'
+            })
+          });
+          if (!res.ok) throw new Error("Failed to prefetch questions");
+          const data = await res.json();
+          setQuestionCache(data);
+          setCurrentQuestion(data[0]);
+        }
+      } catch (err) {
+        toast({ title: "Error", description: "Failed to load questions", variant: "destructive" });
+      }
+    };
+    initQuiz();
   }, []);
 
   const loadNewQuestion = async () => {
-    try {
-      if (mode === 'daily') {
-        const res = await fetch(`/api/ai/daily-content?department=${encodeURIComponent(department || "")}`);
-        if (!res.ok) throw new Error("Failed to fetch daily content");
-        const data = await res.json();
-        const quiz = data.quiz;
-        if (quiz && quiz[questionCount]) {
-          setCurrentQuestion(quiz[questionCount]);
-        } else {
-          setGameOver(true);
-        }
-      } else {
-        // Shared logic for AI duel and mini-games
-        const difficulty = (mode === 'boss-fight') ? "hard" : "medium";
+    const nextIdx = questionCount + 1;
+    const maxQuestions = (mode === 'boss-fight') ? 10 : 5;
+    
+    if (mode !== 'word-rush' && nextIdx >= maxQuestions) {
+      finishGame(score);
+      return;
+    }
+
+    if (questionCache[nextIdx]) {
+      setCurrentQuestion(questionCache[nextIdx]);
+      setQuestionCount(nextIdx);
+    } else if (mode === 'word-rush' || mode === 'ai-duel' || mode === 'survival') {
+      // Fetch more for infinite modes
+      try {
         const q = await fetchQuestion({ 
-          difficulty, 
+          difficulty: mode === 'boss-fight' ? "hard" : "medium", 
           topic: undefined 
         });
+        setQuestionCache(prev => [...prev, q]);
         setCurrentQuestion(q);
+        setQuestionCount(nextIdx);
+      } catch (err) {
+        toast({ title: "Error", description: "Failed to load more questions", variant: "destructive" });
       }
-      setSelectedOption(null);
-      setIsCorrect(null);
-      if (mode !== 'word-rush') {
-        setTimeLeft(15);
-      }
-    } catch (err) {
-      toast({ title: "Error", description: "Failed to load question", variant: "destructive" });
+    } else {
+      setGameOver(true);
+    }
+
+    setSelectedOption(null);
+    setIsCorrect(null);
+    if (mode !== 'word-rush') {
+      setTimeLeft(15);
     }
   };
 
   const handleAnswer = (option: string) => {
-    if (selectedOption) return;
+    if (selectedOption || !currentQuestion) return;
     
     setSelectedOption(option);
     const correct = option === currentQuestion.correctAnswer;
@@ -101,20 +150,13 @@ export default function QuizRunner() {
         colors: ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF']
       });
     } else if (mode === 'survival') {
-      // Survival mode: game over on first wrong answer
       setTimeout(() => finishGame(score), 1000);
       return;
     }
 
     setTimeout(() => {
-      const maxQuestions = (mode === 'boss-fight') ? 10 : 5;
-      if (mode !== 'word-rush' && questionCount >= maxQuestions - 1) {
-        finishGame(score + (correct ? 10 : 0));
-      } else {
-        setQuestionCount(c => c + 1);
-        loadNewQuestion();
-      }
-    }, mode === 'word-rush' ? 500 : 2500);
+      loadNewQuestion();
+    }, mode === 'word-rush' ? 300 : 2500);
   };
 
   const finishGame = (finalScore: number) => {

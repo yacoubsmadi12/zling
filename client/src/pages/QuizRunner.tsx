@@ -12,7 +12,7 @@ import { CheckCircle2, XCircle, ArrowRight, Trophy } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function QuizRunner() {
-  const { mode } = useParams(); // 'ai-duel' or 'daily'
+  const { mode } = useParams(); // 'ai-duel', 'daily', 'word-rush', 'listen-tap', 'survival', 'boss-fight'
   const { mutateAsync: fetchQuestion, isPending: isLoadingQuestion } = useAiDuel();
   const { mutate: submitResult } = useSubmitQuiz();
   const { toast } = useToast();
@@ -25,8 +25,28 @@ export default function QuizRunner() {
   const [score, setScore] = useState(0);
   const [questionCount, setQuestionCount] = useState(0);
   const [gameOver, setGameOver] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(15);
+  const [timeLeft, setTimeLeft] = useState(mode === 'word-rush' ? 60 : 15);
   const [isPaused, setIsPaused] = useState(false);
+
+  // Timer logic for Word Rush
+  useEffect(() => {
+    if (gameOver || isPaused) return;
+    
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          if (mode === 'word-rush') {
+            finishGame(score);
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [gameOver, isPaused, mode]);
 
   // Load initial question
   useEffect(() => {
@@ -46,15 +66,19 @@ export default function QuizRunner() {
           setGameOver(true);
         }
       } else {
+        // Shared logic for AI duel and mini-games
+        const difficulty = (mode === 'boss-fight') ? "hard" : "medium";
         const q = await fetchQuestion({ 
-          difficulty: "medium", 
+          difficulty, 
           topic: undefined 
         });
         setCurrentQuestion(q);
       }
       setSelectedOption(null);
       setIsCorrect(null);
-      setTimeLeft(15);
+      if (mode !== 'word-rush') {
+        setTimeLeft(15);
+      }
     } catch (err) {
       toast({ title: "Error", description: "Failed to load question", variant: "destructive" });
     }
@@ -68,7 +92,7 @@ export default function QuizRunner() {
     setIsCorrect(correct);
 
     if (correct) {
-      const timeBonus = Math.floor(timeLeft * 2);
+      const timeBonus = mode === 'word-rush' ? 0 : Math.floor(timeLeft * 2);
       setScore(s => s + 10 + timeBonus);
       confetti({ 
         particleCount: 100, 
@@ -76,16 +100,21 @@ export default function QuizRunner() {
         origin: { y: 0.6 },
         colors: ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF']
       });
+    } else if (mode === 'survival') {
+      // Survival mode: game over on first wrong answer
+      setTimeout(() => finishGame(score), 1000);
+      return;
     }
 
     setTimeout(() => {
-      if (questionCount >= 4) {
+      const maxQuestions = (mode === 'boss-fight') ? 10 : 5;
+      if (mode !== 'word-rush' && questionCount >= maxQuestions - 1) {
         finishGame(score + (correct ? 10 : 0));
       } else {
         setQuestionCount(c => c + 1);
         loadNewQuestion();
       }
-    }, 2500);
+    }, mode === 'word-rush' ? 500 : 2500);
   };
 
   const finishGame = (finalScore: number) => {

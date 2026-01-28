@@ -41,7 +41,8 @@ const miniGames = [
     icon: Zap,
     color: "from-yellow-400 to-orange-500",
     points: "2x Points",
-    badge: "Flash Speed"
+    badge: "Flash Speed",
+    href: "/quiz/word-rush"
   },
   {
     id: "listen-tap",
@@ -50,7 +51,8 @@ const miniGames = [
     icon: Volume2,
     color: "from-cyan-400 to-blue-500",
     points: "50 Points",
-    badge: "Sharp Ear"
+    badge: "Sharp Ear",
+    href: "/quiz/listen-tap"
   },
   {
     id: "survival",
@@ -59,7 +61,8 @@ const miniGames = [
     icon: ShieldAlert,
     color: "from-red-500 to-rose-700",
     points: "100 Points",
-    badge: "Survivor"
+    badge: "Survivor",
+    href: "/quiz/survival"
   },
   {
     id: "boss-fight",
@@ -68,7 +71,8 @@ const miniGames = [
     icon: Skull,
     color: "from-slate-700 to-slate-900",
     points: "250 Points",
-    badge: "Boss Slayer"
+    badge: "Boss Slayer",
+    href: "/quiz/boss-fight"
   },
 ];
 
@@ -139,38 +143,39 @@ export default function QuizCenter() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {miniGames.map((game, idx) => (
-                <motion.div
-                  key={game.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 + idx * 0.1 }}
-                  className={cn(
-                    "group relative p-6 rounded-3xl border shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer bg-gradient-to-br text-white",
-                    game.color
-                  )}
-                >
-                  <div className="relative z-10 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
-                        <game.icon className="w-6 h-6" />
+                <Link key={game.id} href={game.href}>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 + idx * 0.1 }}
+                    className={cn(
+                      "group relative h-full p-6 rounded-3xl border shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer bg-gradient-to-br text-white",
+                      game.color
+                    )}
+                  >
+                    <div className="relative z-10 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
+                          <game.icon className="w-6 h-6" />
+                        </div>
+                        <div className="text-[10px] font-bold bg-black/20 backdrop-blur-md px-2 py-1 rounded-full uppercase tracking-wider">
+                          {game.badge}
+                        </div>
                       </div>
-                      <div className="text-[10px] font-bold bg-black/20 backdrop-blur-md px-2 py-1 rounded-full uppercase tracking-wider">
-                        {game.badge}
+                      <div>
+                        <h3 className="text-lg font-bold mb-1">{game.title}</h3>
+                        <p className="text-xs text-white/80 line-clamp-2 leading-relaxed">{game.desc}</p>
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                        <span className="text-xs font-bold text-white/90">{game.points}</span>
+                        <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-primary transition-colors">
+                          <Zap className="w-3 h-3 fill-current" />
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <h3 className="text-lg font-bold mb-1">{game.title}</h3>
-                      <p className="text-xs text-white/80 line-clamp-2 leading-relaxed">{game.desc}</p>
-                    </div>
-                    <div className="flex items-center justify-between pt-2 border-t border-white/10">
-                      <span className="text-xs font-bold text-white/90">{game.points}</span>
-                      <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-primary transition-colors">
-                        <Zap className="w-3 h-3 fill-current" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="absolute -top-12 -right-12 w-24 h-24 bg-white/5 rounded-full blur-xl group-hover:bg-white/10 transition-colors" />
-                </motion.div>
+                    <div className="absolute -top-12 -right-12 w-24 h-24 bg-white/5 rounded-full blur-xl group-hover:bg-white/10 transition-colors" />
+                  </motion.div>
+                </Link>
               ))}
             </div>
           </div>

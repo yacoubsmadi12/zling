@@ -190,6 +190,89 @@ export async function registerRoutes(
     }
   });
 
+  // --- Mini Games API ---
+
+  // Word Rush: 20 random words
+  app.get("/api/games/word-rush", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const terms = await storage.getRandomTerms(20);
+      res.json(terms);
+    } catch (error) {
+      console.error("Word Rush Error:", error);
+      res.status(500).json({ message: "Failed to fetch words for Word Rush" });
+    }
+  });
+
+  // Match the Meaning: Word + 3 meanings
+  app.get("/api/games/match-meaning", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const terms = await storage.getRandomTerms(10); // Get 10 sets
+      const allTerms = await storage.getTerms();
+      
+      const questions = terms.map(term => {
+        // Get 2 other random meanings for distractors
+        const distractors = allTerms
+          .filter(t => t.id !== term.id)
+          .sort(() => 0.5 - Math.random())
+          .slice(0, 2)
+          .map(t => t.definition);
+        
+        const options = [term.definition, ...distractors].sort(() => 0.5 - Math.random());
+        
+        return {
+          id: term.id,
+          word: term.term,
+          correctMeaning: term.definition,
+          options
+        };
+      });
+      
+      res.json(questions);
+    } catch (error) {
+      console.error("Match Meaning Error:", error);
+      res.status(500).json({ message: "Failed to fetch words for Match the Meaning" });
+    }
+  });
+
+  // Survival Mode: Static-like questions from DB
+  app.get("/api/games/survival", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const terms = await storage.getRandomTerms(50); // Large pool for survival
+      res.json(terms);
+    } catch (error) {
+      console.error("Survival Mode Error:", error);
+      res.status(500).json({ message: "Failed to fetch words for Survival Mode" });
+    }
+  });
+
+  // Audio Tap: Using TTS integration but with database words
+  app.get("/api/games/audio-tap", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const terms = await storage.getRandomTerms(10);
+      res.json(terms);
+    } catch (error) {
+      console.error("Audio Tap Error:", error);
+      res.status(500).json({ message: "Failed to fetch words for Audio Tap" });
+    }
+  });
+
+  // Monthly Boss: 10 hard questions
+  app.get("/api/games/monthly-boss", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      // Select 10 random terms but format them as "hard" (could filter by department or just use random for now)
+      const terms = await storage.getRandomTerms(10);
+      res.json(terms);
+    } catch (error) {
+      console.error("Monthly Boss Error:", error);
+      res.status(500).json({ message: "Failed to fetch words for Monthly Boss" });
+    }
+  });
+
   // --- API Routes ---
 
   // Generate Avatar

@@ -56,6 +56,9 @@ export interface IStorage {
   addPoints(userId: number, points: number, reason: string): Promise<User>;
   checkAndAwardPointsBadges(userId: number): Promise<void>;
 
+  // Mini Games
+  getRandomTerms(limit: number): Promise<Term[]>;
+
   // Cron specific
   getUniqueDepartments(): Promise<string[]>;
 
@@ -317,6 +320,10 @@ export class DatabaseStorage implements IStorage {
         }
       }
     }
+  }
+
+  async getRandomTerms(limit: number): Promise<Term[]> {
+    return db.select().from(terms).orderBy(sql`RANDOM()`).limit(limit);
   }
 }
 

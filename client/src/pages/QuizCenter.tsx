@@ -12,7 +12,8 @@ const modes = [
     desc: "Battle against an AI opponent to test your knowledge.",
     icon: Brain,
     color: "from-purple-500 to-indigo-600",
-    href: "/quiz/ai-duel"
+    href: "/term-duel",
+    badge: "🎯 Default CTA"
   },
   {
     id: "daily",
@@ -20,16 +21,17 @@ const modes = [
     desc: "Your daily dose of random questions to keep streaks alive.",
     icon: Sparkles,
     color: "from-orange-400 to-red-500",
-    href: "/quiz/daily"
+    href: "/daily-mix",
+    badge: "🔥 Today"
   },
   {
     id: "pvp",
     title: "Live Battle",
-    desc: "Challenge a colleague in real-time (Coming Soon).",
+    desc: "Play with friends - async battles!",
     icon: Swords,
     color: "from-blue-400 to-blue-600",
-    href: "#",
-    disabled: true
+    href: "/live-battle",
+    badge: "👥 Play with friends"
   },
 ];
 
@@ -95,22 +97,27 @@ export default function QuizCenter() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {modes.map((mode, idx) => (
-              <Link key={mode.id} href={mode.disabled ? "#" : mode.href}>
+              <Link key={mode.id} href={mode.href} data-testid={`link-mode-${mode.id}`}>
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: idx * 0.1 }}
-                  className={`
-                    relative h-full min-h-[200px] rounded-3xl p-6 text-white overflow-hidden shadow-lg
-                    bg-gradient-to-br ${mode.color}
-                    ${mode.disabled ? "opacity-50 cursor-not-allowed grayscale" : "cursor-pointer hover:scale-105 transition-transform"}
-                  `}
+                  className="relative h-full min-h-[200px] rounded-3xl p-6 text-white overflow-hidden shadow-lg bg-gradient-to-br cursor-pointer hover:scale-105 transition-transform"
+                  style={{ backgroundImage: `linear-gradient(to bottom right, var(--tw-gradient-stops))` }}
                 >
+                  <div className={`absolute inset-0 bg-gradient-to-br ${mode.color} rounded-3xl`} />
                   <div className="relative z-10 flex flex-col h-full justify-between">
-                    <div className="bg-white/20 w-fit p-3 rounded-2xl backdrop-blur-md mb-4">
-                      <mode.icon className="w-8 h-8 text-white" />
+                    <div className="flex items-start justify-between">
+                      <div className="bg-white/20 w-fit p-3 rounded-2xl backdrop-blur-md">
+                        <mode.icon className="w-8 h-8 text-white" />
+                      </div>
+                      {mode.badge && (
+                        <div className="bg-black/20 backdrop-blur-md px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide">
+                          {mode.badge}
+                        </div>
+                      )}
                     </div>
-                    <div>
+                    <div className="mt-4">
                       <h3 className="text-2xl font-bold mb-2">{mode.title}</h3>
                       <p className="text-white/80 text-sm leading-relaxed">{mode.desc}</p>
                     </div>

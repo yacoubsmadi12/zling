@@ -92,6 +92,59 @@ export const userLearnedTerms = pgTable("user_learned_terms", {
   learnedAt: timestamp("learned_at").defaultNow(),
 });
 
+// AI Duel sessions for Term Duel mode
+export const aiDuels = pgTable("ai_duels", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  difficulty: text("difficulty").notNull(), // easy, medium, hard
+  aiPersonality: text("ai_personality").notNull(), // calm_professor, aggressive_challenger, trickster
+  userScore: integer("user_score").default(0).notNull(),
+  aiScore: integer("ai_score").default(0).notNull(),
+  totalQuestions: integer("total_questions").default(10).notNull(),
+  questionsAnswered: integer("questions_answered").default(0).notNull(),
+  wrongAnswers: jsonb("wrong_answers").default([]).notNull(), // Array of {question, userAnswer, correctAnswer, term, definition}
+  xpEarned: integer("xp_earned").default(0).notNull(),
+  completed: boolean("completed").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Async battles for Live Battle mode
+export const asyncBattles = pgTable("async_battles", {
+  id: serial("id").primaryKey(),
+  challengerId: integer("challenger_id").notNull(),
+  opponentId: integer("opponent_id"), // null if waiting for opponent
+  challengerScore: integer("challenger_score").default(0).notNull(),
+  opponentScore: integer("opponent_score"),
+  questions: jsonb("questions").notNull(), // Array of questions for this battle
+  challengerAnswers: jsonb("challenger_answers").default([]).notNull(),
+  opponentAnswers: jsonb("opponent_answers"),
+  status: text("status").default("pending").notNull(), // pending, active, completed
+  winnerId: integer("winner_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+// Daily streak tracking
+export const dailyStreaks = pgTable("daily_streaks", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  currentStreak: integer("current_streak").default(0).notNull(),
+  longestStreak: integer("longest_streak").default(0).notNull(),
+  lastCompletedDate: text("last_completed_date"), // YYYY-MM-DD
+  streakSaversUsed: integer("streak_savers_used").default(0).notNull(),
+  totalDaysCompleted: integer("total_days_completed").default(0).notNull(),
+});
+
+// Weekly leaderboard snapshots
+export const weeklyLeaderboard = pgTable("weekly_leaderboard", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  weekStart: text("week_start").notNull(), // YYYY-MM-DD
+  points: integer("points").default(0).notNull(),
+  wins: integer("wins").default(0).notNull(),
+  gamesPlayed: integer("games_played").default(0).notNull(),
+});
+
 // Relations
 export const userRelations = relations(users, ({ many }) => ({
   quizzes: many(quizzes),
@@ -136,6 +189,10 @@ export const insertRewardSchema = createInsertSchema(rewards).omit({ id: true })
 export const insertTermSchema = createInsertSchema(terms).omit({ id: true });
 export const insertQuizSchema = createInsertSchema(quizzes).omit({ id: true, date: true });
 export const insertBadgeSchema = createInsertSchema(badges).omit({ id: true });
+export const insertAiDuelSchema = createInsertSchema(aiDuels).omit({ id: true, createdAt: true });
+export const insertAsyncBattleSchema = createInsertSchema(asyncBattles).omit({ id: true, createdAt: true, completedAt: true });
+export const insertDailyStreakSchema = createInsertSchema(dailyStreaks).omit({ id: true });
+export const insertWeeklyLeaderboardSchema = createInsertSchema(weeklyLeaderboard).omit({ id: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -152,3 +209,11 @@ export type Reward = typeof rewards.$inferSelect;
 export type InsertReward = z.infer<typeof insertRewardSchema>;
 export type UserReward = typeof userRewards.$inferSelect;
 export type UserLearnedTerm = typeof userLearnedTerms.$inferSelect;
+export type AiDuel = typeof aiDuels.$inferSelect;
+export type InsertAiDuel = z.infer<typeof insertAiDuelSchema>;
+export type AsyncBattle = typeof asyncBattles.$inferSelect;
+export type InsertAsyncBattle = z.infer<typeof insertAsyncBattleSchema>;
+export type DailyStreak = typeof dailyStreaks.$inferSelect;
+export type InsertDailyStreak = z.infer<typeof insertDailyStreakSchema>;
+export type WeeklyLeaderboard = typeof weeklyLeaderboard.$inferSelect;
+export type InsertWeeklyLeaderboard = z.infer<typeof insertWeeklyLeaderboardSchema>;

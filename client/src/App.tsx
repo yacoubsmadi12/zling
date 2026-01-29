@@ -13,6 +13,9 @@ import Learn from "@/pages/Learn";
 import FlashcardsPage from "@/pages/FlashcardsPage";
 import QuizCenter from "@/pages/QuizCenter";
 import QuizRunner from "@/pages/QuizRunner";
+import TermDuel from "@/pages/TermDuel";
+import DailyMix from "@/pages/DailyMix";
+import LiveBattle from "@/pages/LiveBattle";
 import Leaderboard from "@/pages/Leaderboard";
 import Profile from "@/pages/Profile";
 import AdminDashboard from "@/pages/admin-dashboard";
@@ -30,6 +33,9 @@ function Router() {
       <ProtectedRoute path="/flashcards/:department" component={FlashcardsPage} />
       <ProtectedRoute path="/quiz" component={QuizCenter} />
       <ProtectedRoute path="/quiz/:mode" component={QuizRunner} />
+      <ProtectedRoute path="/term-duel" component={TermDuel} />
+      <ProtectedRoute path="/daily-mix" component={DailyMix} />
+      <ProtectedRoute path="/live-battle" component={LiveBattle} />
       <ProtectedRoute path="/leaderboard" component={Leaderboard} />
       <ProtectedRoute path="/profile" component={Profile} />
       

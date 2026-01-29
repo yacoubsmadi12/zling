@@ -565,6 +565,495 @@ export async function registerRoutes(
     }
   });
 
+  // --- Term Duel API ---
+  app.post("/api/duel/start", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const user = req.user as User;
+      const { difficulty, aiPersonality } = req.body;
+      
+      const questionCount = 10;
+      const difficultyPrompt = difficulty === "easy" 
+        ? "basic, straightforward questions" 
+        : difficulty === "hard" 
+          ? "challenging, tricky questions with subtle distinctions" 
+          : "moderately challenging questions";
+      
+      const personalityPrompt = aiPersonality === "trickster"
+        ? "Include some tricky options that are close to the correct answer but subtly wrong."
+        : aiPersonality === "aggressive_challenger"
+          ? "Make questions that test quick thinking and exact knowledge."
+          : "Create educational questions that help learners understand concepts.";
+      
+      const prompt = `Generate ${questionCount} telecom industry vocabulary quiz questions for the ${user.department} department.
+      
+Requirements:
+- Difficulty: ${difficultyPrompt}
+- Style: ${personalityPrompt}
+- Each question should test knowledge of a specific telecom term
+- Include 4 options per question with only one correct answer
+- Provide the term, its definition, and a practical example
+
+Return ONLY valid JSON array with this exact structure:
+[
+  {
+    "id": 1,
+    "term": "the telecom term",
+    "question": "the question text",
+    "options": ["option1", "option2", "option3", "option4"],
+    "correctAnswer": "the correct option exactly as it appears in options",
+    "definition": "brief definition of the term",
+    "example": "practical example of using this term"
+  }
+]`;
+
+      const response = await generateContent(prompt);
+      let questions;
+      try {
+        const jsonMatch = response.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          questions = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error("No JSON array found");
+        }
+      } catch (parseErr) {
+        console.error("Failed to parse duel questions:", parseErr);
+        return res.status(500).json({ message: "Failed to generate questions" });
+      }
+
+      const [duel] = await db.insert(require("@shared/schema").aiDuels).values({
+        userId: user.id,
+        difficulty,
+        aiPersonality,
+        totalQuestions: questionCount,
+        wrongAnswers: [],
+      }).returning();
+
+      res.json({ duelId: duel.id, questions });
+    } catch (error) {
+      console.error("Error starting duel:", error);
+      res.status(500).json({ message: "Failed to start duel" });
+    }
+  });
+
+  app.post("/api/duel/complete", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const user = req.user as User;
+      const { duelId, userScore, aiScore, wrongAnswers, xpEarned, won } = req.body;
+      
+      await db.update(require("@shared/schema").aiDuels)
+        .set({
+          userScore,
+          aiScore,
+          wrongAnswers,
+          xpEarned,
+          completed: true,
+        })
+        .where(eq(require("@shared/schema").aiDuels.id, duelId));
+
+      await storage.addPoints(user.id, xpEarned, "Term Duel completion");
+
+      const newBadges: string[] = [];
+      
+      if (won) {
+        const allDuels = await db.select()
+          .from(require("@shared/schema").aiDuels)
+          .where(eq(require("@shared/schema").aiDuels.userId, user.id));
+        
+        const wins = allDuels.filter(d => d.userScore > d.aiScore).length;
+        
+        if (wins === 5) newBadges.push("AI Slayer");
+        if (wins === 10) newBadges.push("AI Master");
+        if (wins === 25) newBadges.push("AI Legend");
+        
+        const hardWins = allDuels.filter(d => d.difficulty === "hard" && d.userScore > d.aiScore).length;
+        if (hardWins === 5) newBadges.push("Hard Mode Hero");
+      }
+      
+      if (wrongAnswers.length === 0 && userScore > 0) {
+        newBadges.push("Perfect Score");
+      }
+
+      res.json({ success: true, newBadges });
+    } catch (error) {
+      console.error("Error completing duel:", error);
+      res.status(500).json({ message: "Failed to complete duel" });
+    }
+  });
+
+  // --- Daily Mix API ---
+  app.get("/api/daily-mix/status", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const user = req.user as User;
+      const today = new Date().toISOString().split("T")[0];
+      
+      const [streak] = await db.select()
+        .from(require("@shared/schema").dailyStreaks)
+        .where(eq(require("@shared/schema").dailyStreaks.userId, user.id));
+      
+      if (!streak) {
+        const [newStreak] = await db.insert(require("@shared/schema").dailyStreaks)
+          .values({ userId: user.id })
+          .returning();
+        return res.json({
+          currentStreak: 0,
+          longestStreak: 0,
+          completedToday: false,
+          canSaveStreak: false,
+        });
+      }
+
+      const completedToday = streak.lastCompletedDate === today;
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split("T")[0];
+      
+      const canSaveStreak = !completedToday && 
+                           streak.lastCompletedDate === yesterdayStr &&
+                           streak.currentStreak > 0;
+
+      res.json({
+        currentStreak: streak.currentStreak,
+        longestStreak: streak.longestStreak,
+        completedToday,
+        canSaveStreak,
+        totalDaysCompleted: streak.totalDaysCompleted,
+      });
+    } catch (error) {
+      console.error("Error getting daily mix status:", error);
+      res.status(500).json({ message: "Failed to get status" });
+    }
+  });
+
+  app.post("/api/daily-mix/complete", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const user = req.user as User;
+      const { score, totalQuestions } = req.body;
+      const today = new Date().toISOString().split("T")[0];
+      
+      let [streak] = await db.select()
+        .from(require("@shared/schema").dailyStreaks)
+        .where(eq(require("@shared/schema").dailyStreaks.userId, user.id));
+      
+      if (!streak) {
+        [streak] = await db.insert(require("@shared/schema").dailyStreaks)
+          .values({ userId: user.id })
+          .returning();
+      }
+
+      if (streak.lastCompletedDate === today) {
+        return res.json({ message: "Already completed today", streak });
+      }
+
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split("T")[0];
+      
+      let newStreak = 1;
+      if (streak.lastCompletedDate === yesterdayStr) {
+        newStreak = streak.currentStreak + 1;
+      }
+      
+      const newLongest = Math.max(streak.longestStreak, newStreak);
+      
+      await db.update(require("@shared/schema").dailyStreaks)
+        .set({
+          currentStreak: newStreak,
+          longestStreak: newLongest,
+          lastCompletedDate: today,
+          totalDaysCompleted: streak.totalDaysCompleted + 1,
+        })
+        .where(eq(require("@shared/schema").dailyStreaks.id, streak.id));
+
+      let bonusXP = 0;
+      const newBadges: string[] = [];
+      
+      if (newStreak === 3) {
+        bonusXP = 50;
+        newBadges.push("Streak Starter");
+      } else if (newStreak === 7) {
+        bonusXP = 100;
+        newBadges.push("Weekly Warrior");
+      } else if (newStreak === 30) {
+        bonusXP = 500;
+        newBadges.push("Monthly Master");
+      }
+      
+      const baseXP = Math.round((score / totalQuestions) * 30);
+      const totalXP = baseXP + bonusXP;
+      
+      await storage.addPoints(user.id, totalXP, "Daily Mix completion");
+
+      res.json({
+        success: true,
+        newStreak,
+        bonusXP,
+        totalXP,
+        newBadges,
+      });
+    } catch (error) {
+      console.error("Error completing daily mix:", error);
+      res.status(500).json({ message: "Failed to complete daily mix" });
+    }
+  });
+
+  app.post("/api/daily-mix/save-streak", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const user = req.user as User;
+      const xpCost = 50;
+      
+      if (user.points < xpCost) {
+        return res.status(400).json({ message: "Not enough XP to save streak" });
+      }
+
+      const [streak] = await db.select()
+        .from(require("@shared/schema").dailyStreaks)
+        .where(eq(require("@shared/schema").dailyStreaks.userId, user.id));
+      
+      if (!streak) {
+        return res.status(400).json({ message: "No streak to save" });
+      }
+
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+      await db.update(require("@shared/schema").dailyStreaks)
+        .set({
+          lastCompletedDate: yesterdayStr,
+          streakSaversUsed: streak.streakSaversUsed + 1,
+        })
+        .where(eq(require("@shared/schema").dailyStreaks.id, streak.id));
+
+      await db.update(users)
+        .set({ points: user.points - xpCost })
+        .where(eq(users.id, user.id));
+
+      res.json({ success: true, xpSpent: xpCost });
+    } catch (error) {
+      console.error("Error saving streak:", error);
+      res.status(500).json({ message: "Failed to save streak" });
+    }
+  });
+
+  // --- Async Battle API ---
+  app.post("/api/battle/create", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const user = req.user as User;
+      const { opponentId } = req.body;
+      
+      const prompt = `Generate 10 telecom industry vocabulary quiz questions suitable for a competitive battle.
+Mix questions from different departments: Engineering, Finance, Marketing, and GRC.
+Each question should be challenging but fair.
+
+Return ONLY valid JSON array:
+[
+  {
+    "id": 1,
+    "term": "telecom term",
+    "question": "question text",
+    "options": ["opt1", "opt2", "opt3", "opt4"],
+    "correctAnswer": "exact correct option"
+  }
+]`;
+
+      const response = await generateContent(prompt);
+      let questions;
+      try {
+        const jsonMatch = response.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          questions = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error("No JSON found");
+        }
+      } catch (e) {
+        return res.status(500).json({ message: "Failed to generate battle questions" });
+      }
+
+      const [battle] = await db.insert(require("@shared/schema").asyncBattles).values({
+        challengerId: user.id,
+        opponentId: opponentId || null,
+        questions,
+        status: opponentId ? "active" : "pending",
+      }).returning();
+
+      res.json({ battleId: battle.id, questions });
+    } catch (error) {
+      console.error("Error creating battle:", error);
+      res.status(500).json({ message: "Failed to create battle" });
+    }
+  });
+
+  app.get("/api/battle/pending", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const user = req.user as User;
+      
+      const battles = await db.select()
+        .from(require("@shared/schema").asyncBattles)
+        .where(eq(require("@shared/schema").asyncBattles.status, "pending"));
+      
+      const availableBattles = battles.filter(b => b.challengerId !== user.id);
+      
+      const battlesWithUsers = await Promise.all(
+        availableBattles.map(async (b) => {
+          const challenger = await storage.getUser(b.challengerId);
+          return {
+            ...b,
+            challengerName: challenger?.fullName || challenger?.username || "Unknown",
+          };
+        })
+      );
+
+      res.json(battlesWithUsers);
+    } catch (error) {
+      console.error("Error getting pending battles:", error);
+      res.status(500).json({ message: "Failed to get battles" });
+    }
+  });
+
+  app.post("/api/battle/join/:battleId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const user = req.user as User;
+      const battleId = parseInt(req.params.battleId);
+      
+      const [battle] = await db.select()
+        .from(require("@shared/schema").asyncBattles)
+        .where(eq(require("@shared/schema").asyncBattles.id, battleId));
+      
+      if (!battle || battle.status !== "pending") {
+        return res.status(400).json({ message: "Battle not available" });
+      }
+
+      await db.update(require("@shared/schema").asyncBattles)
+        .set({
+          opponentId: user.id,
+          status: "active",
+        })
+        .where(eq(require("@shared/schema").asyncBattles.id, battleId));
+
+      res.json({ success: true, questions: battle.questions });
+    } catch (error) {
+      console.error("Error joining battle:", error);
+      res.status(500).json({ message: "Failed to join battle" });
+    }
+  });
+
+  app.post("/api/battle/submit/:battleId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const user = req.user as User;
+      const battleId = parseInt(req.params.battleId);
+      const { answers, score } = req.body;
+      
+      const [battle] = await db.select()
+        .from(require("@shared/schema").asyncBattles)
+        .where(eq(require("@shared/schema").asyncBattles.id, battleId));
+      
+      if (!battle) {
+        return res.status(404).json({ message: "Battle not found" });
+      }
+
+      const isChallenger = battle.challengerId === user.id;
+      
+      if (isChallenger) {
+        await db.update(require("@shared/schema").asyncBattles)
+          .set({
+            challengerAnswers: answers,
+            challengerScore: score,
+          })
+          .where(eq(require("@shared/schema").asyncBattles.id, battleId));
+      } else {
+        const [updated] = await db.update(require("@shared/schema").asyncBattles)
+          .set({
+            opponentAnswers: answers,
+            opponentScore: score,
+          })
+          .where(eq(require("@shared/schema").asyncBattles.id, battleId))
+          .returning();
+        
+        if (updated.challengerScore !== null && updated.opponentScore !== null) {
+          let winnerId = null;
+          if (updated.challengerScore > updated.opponentScore) {
+            winnerId = updated.challengerId;
+          } else if (updated.opponentScore > updated.challengerScore) {
+            winnerId = updated.opponentId;
+          }
+          
+          await db.update(require("@shared/schema").asyncBattles)
+            .set({
+              status: "completed",
+              winnerId,
+              completedAt: new Date(),
+            })
+            .where(eq(require("@shared/schema").asyncBattles.id, battleId));
+          
+          if (winnerId) {
+            await storage.addPoints(winnerId, 50, "Battle victory");
+          }
+        }
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error submitting battle:", error);
+      res.status(500).json({ message: "Failed to submit answers" });
+    }
+  });
+
+  app.get("/api/battle/my-battles", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const user = req.user as User;
+      const { asyncBattles } = require("@shared/schema");
+      const { or } = require("drizzle-orm");
+      
+      const battles = await db.select()
+        .from(asyncBattles)
+        .where(or(
+          eq(asyncBattles.challengerId, user.id),
+          eq(asyncBattles.opponentId, user.id)
+        ));
+
+      res.json(battles);
+    } catch (error) {
+      console.error("Error getting my battles:", error);
+      res.status(500).json({ message: "Failed to get battles" });
+    }
+  });
+
+  app.get("/api/leaderboard/weekly", async (req, res) => {
+    try {
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - dayOfWeek);
+      const weekStart = startOfWeek.toISOString().split("T")[0];
+
+      const allUsers = await storage.getAllUsers();
+      const leaderboard = allUsers
+        .map(u => ({
+          id: u.id,
+          name: u.fullName || u.username,
+          points: u.points,
+          department: u.department,
+        }))
+        .sort((a, b) => b.points - a.points)
+        .slice(0, 20);
+
+      res.json(leaderboard);
+    } catch (error) {
+      console.error("Error getting weekly leaderboard:", error);
+      res.status(500).json({ message: "Failed to get leaderboard" });
+    }
+  });
+
   // --- Seed Data ---
   await seedData();
 

@@ -6,9 +6,9 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import OpenAI from "openai";
 import { Server as SocketIOServer } from "socket.io";
-import { User, insertLdapSettingsSchema, insertRewardSchema, users } from "@shared/schema";
+import { User, insertLdapSettingsSchema, insertRewardSchema, users, aiDuels, dailyStreaks, asyncBattles, terms } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, or, and, desc } from "drizzle-orm";
 import { registerImageRoutes } from "./replit_integrations/image";
 import { registerAudioRoutes } from "./replit_integrations/audio";
 
@@ -58,6 +58,35 @@ async function generateContent(prompt: string): Promise<string> {
     console.error("Gemini Generation Error:", error);
     throw error;
   }
+}
+
+// Helper: Generate fallback questions from database terms when AI is unavailable
+async function generateFallbackQuestions(count: number = 10): Promise<any[]> {
+  const allTerms = await db.select().from(terms);
+  if (allTerms.length < 4) {
+    throw new Error("Not enough terms in database");
+  }
+  
+  const shuffled = [...allTerms].sort(() => Math.random() - 0.5);
+  const selectedTerms = shuffled.slice(0, Math.min(count, shuffled.length));
+  
+  return selectedTerms.map((term, idx) => {
+    const wrongOptions = shuffled
+      .filter(t => t.id !== term.id)
+      .slice(0, 3)
+      .map(t => t.definition.slice(0, 100) + (t.definition.length > 100 ? "..." : ""));
+    
+    const correctDef = term.definition.slice(0, 100) + (term.definition.length > 100 ? "..." : "");
+    const options = [...wrongOptions, correctDef].sort(() => Math.random() - 0.5);
+    
+    return {
+      id: idx + 1,
+      term: term.term,
+      question: `What is the correct definition of "${term.term}"?`,
+      options,
+      correctAnswer: correctDef
+    };
+  });
 }
 
 export async function registerRoutes(
@@ -585,7 +614,9 @@ export async function registerRoutes(
           ? "Make questions that test quick thinking and exact knowledge."
           : "Create educational questions that help learners understand concepts.";
       
-      const prompt = `Generate ${questionCount} telecom industry vocabulary quiz questions for the ${user.department} department.
+      let questions;
+      try {
+        const prompt = `Generate ${questionCount} telecom industry vocabulary quiz questions for the ${user.department} department.
       
 Requirements:
 - Difficulty: ${difficultyPrompt}
@@ -607,21 +638,24 @@ Return ONLY valid JSON array with this exact structure:
   }
 ]`;
 
-      const response = await generateContent(prompt);
-      let questions;
-      try {
+        const response = await generateContent(prompt);
         const jsonMatch = response.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
           questions = JSON.parse(jsonMatch[0]);
         } else {
           throw new Error("No JSON array found");
         }
-      } catch (parseErr) {
-        console.error("Failed to parse duel questions:", parseErr);
-        return res.status(500).json({ message: "Failed to generate questions" });
+      } catch (aiError) {
+        console.log("AI unavailable for duel, using fallback questions");
+        const fallback = await generateFallbackQuestions(questionCount);
+        questions = fallback.map(q => ({
+          ...q,
+          definition: "See explanation after the quiz",
+          example: "Commonly used in telecom contexts"
+        }));
       }
 
-      const [duel] = await db.insert(require("@shared/schema").aiDuels).values({
+      const [duel] = await db.insert(aiDuels).values({
         userId: user.id,
         difficulty,
         aiPersonality,
@@ -642,7 +676,7 @@ Return ONLY valid JSON array with this exact structure:
       const user = req.user as User;
       const { duelId, userScore, aiScore, wrongAnswers, xpEarned, won } = req.body;
       
-      await db.update(require("@shared/schema").aiDuels)
+      await db.update(aiDuels)
         .set({
           userScore,
           aiScore,
@@ -650,7 +684,7 @@ Return ONLY valid JSON array with this exact structure:
           xpEarned,
           completed: true,
         })
-        .where(eq(require("@shared/schema").aiDuels.id, duelId));
+        .where(eq(aiDuels.id, duelId));
 
       await storage.addPoints(user.id, xpEarned, "Term Duel completion");
 
@@ -658,8 +692,8 @@ Return ONLY valid JSON array with this exact structure:
       
       if (won) {
         const allDuels = await db.select()
-          .from(require("@shared/schema").aiDuels)
-          .where(eq(require("@shared/schema").aiDuels.userId, user.id));
+          .from(aiDuels)
+          .where(eq(aiDuels.userId, user.id));
         
         const wins = allDuels.filter(d => d.userScore > d.aiScore).length;
         
@@ -690,11 +724,11 @@ Return ONLY valid JSON array with this exact structure:
       const today = new Date().toISOString().split("T")[0];
       
       const [streak] = await db.select()
-        .from(require("@shared/schema").dailyStreaks)
-        .where(eq(require("@shared/schema").dailyStreaks.userId, user.id));
+        .from(dailyStreaks)
+        .where(eq(dailyStreaks.userId, user.id));
       
       if (!streak) {
-        const [newStreak] = await db.insert(require("@shared/schema").dailyStreaks)
+        const [newStreak] = await db.insert(dailyStreaks)
           .values({ userId: user.id })
           .returning();
         return res.json({
@@ -735,11 +769,11 @@ Return ONLY valid JSON array with this exact structure:
       const today = new Date().toISOString().split("T")[0];
       
       let [streak] = await db.select()
-        .from(require("@shared/schema").dailyStreaks)
-        .where(eq(require("@shared/schema").dailyStreaks.userId, user.id));
+        .from(dailyStreaks)
+        .where(eq(dailyStreaks.userId, user.id));
       
       if (!streak) {
-        [streak] = await db.insert(require("@shared/schema").dailyStreaks)
+        [streak] = await db.insert(dailyStreaks)
           .values({ userId: user.id })
           .returning();
       }
@@ -759,14 +793,14 @@ Return ONLY valid JSON array with this exact structure:
       
       const newLongest = Math.max(streak.longestStreak, newStreak);
       
-      await db.update(require("@shared/schema").dailyStreaks)
+      await db.update(dailyStreaks)
         .set({
           currentStreak: newStreak,
           longestStreak: newLongest,
           lastCompletedDate: today,
           totalDaysCompleted: streak.totalDaysCompleted + 1,
         })
-        .where(eq(require("@shared/schema").dailyStreaks.id, streak.id));
+        .where(eq(dailyStreaks.id, streak.id));
 
       let bonusXP = 0;
       const newBadges: string[] = [];
@@ -811,8 +845,8 @@ Return ONLY valid JSON array with this exact structure:
       }
 
       const [streak] = await db.select()
-        .from(require("@shared/schema").dailyStreaks)
-        .where(eq(require("@shared/schema").dailyStreaks.userId, user.id));
+        .from(dailyStreaks)
+        .where(eq(dailyStreaks.userId, user.id));
       
       if (!streak) {
         return res.status(400).json({ message: "No streak to save" });
@@ -822,12 +856,12 @@ Return ONLY valid JSON array with this exact structure:
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayStr = yesterday.toISOString().split("T")[0];
 
-      await db.update(require("@shared/schema").dailyStreaks)
+      await db.update(dailyStreaks)
         .set({
           lastCompletedDate: yesterdayStr,
           streakSaversUsed: streak.streakSaversUsed + 1,
         })
-        .where(eq(require("@shared/schema").dailyStreaks.id, streak.id));
+        .where(eq(dailyStreaks.id, streak.id));
 
       await db.update(users)
         .set({ points: user.points - xpCost })
@@ -847,7 +881,9 @@ Return ONLY valid JSON array with this exact structure:
       const user = req.user as User;
       const { opponentId } = req.body;
       
-      const prompt = `Generate 10 telecom industry vocabulary quiz questions suitable for a competitive battle.
+      let questions;
+      try {
+        const prompt = `Generate 10 telecom industry vocabulary quiz questions suitable for a competitive battle.
 Mix questions from different departments: Engineering, Finance, Marketing, and GRC.
 Each question should be challenging but fair.
 
@@ -862,20 +898,19 @@ Return ONLY valid JSON array:
   }
 ]`;
 
-      const response = await generateContent(prompt);
-      let questions;
-      try {
+        const response = await generateContent(prompt);
         const jsonMatch = response.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
           questions = JSON.parse(jsonMatch[0]);
         } else {
           throw new Error("No JSON found");
         }
-      } catch (e) {
-        return res.status(500).json({ message: "Failed to generate battle questions" });
+      } catch (aiError) {
+        console.log("AI unavailable, using fallback questions");
+        questions = await generateFallbackQuestions(10);
       }
 
-      const [battle] = await db.insert(require("@shared/schema").asyncBattles).values({
+      const [battle] = await db.insert(asyncBattles).values({
         challengerId: user.id,
         opponentId: opponentId || null,
         questions,
@@ -895,8 +930,8 @@ Return ONLY valid JSON array:
       const user = req.user as User;
       
       const battles = await db.select()
-        .from(require("@shared/schema").asyncBattles)
-        .where(eq(require("@shared/schema").asyncBattles.status, "pending"));
+        .from(asyncBattles)
+        .where(eq(asyncBattles.status, "pending"));
       
       const availableBattles = battles.filter(b => b.challengerId !== user.id);
       
@@ -924,19 +959,19 @@ Return ONLY valid JSON array:
       const battleId = parseInt(req.params.battleId);
       
       const [battle] = await db.select()
-        .from(require("@shared/schema").asyncBattles)
-        .where(eq(require("@shared/schema").asyncBattles.id, battleId));
+        .from(asyncBattles)
+        .where(eq(asyncBattles.id, battleId));
       
       if (!battle || battle.status !== "pending") {
         return res.status(400).json({ message: "Battle not available" });
       }
 
-      await db.update(require("@shared/schema").asyncBattles)
+      await db.update(asyncBattles)
         .set({
           opponentId: user.id,
           status: "active",
         })
-        .where(eq(require("@shared/schema").asyncBattles.id, battleId));
+        .where(eq(asyncBattles.id, battleId));
 
       res.json({ success: true, questions: battle.questions });
     } catch (error) {
@@ -953,8 +988,8 @@ Return ONLY valid JSON array:
       const { answers, score } = req.body;
       
       const [battle] = await db.select()
-        .from(require("@shared/schema").asyncBattles)
-        .where(eq(require("@shared/schema").asyncBattles.id, battleId));
+        .from(asyncBattles)
+        .where(eq(asyncBattles.id, battleId));
       
       if (!battle) {
         return res.status(404).json({ message: "Battle not found" });
@@ -963,19 +998,19 @@ Return ONLY valid JSON array:
       const isChallenger = battle.challengerId === user.id;
       
       if (isChallenger) {
-        await db.update(require("@shared/schema").asyncBattles)
+        await db.update(asyncBattles)
           .set({
             challengerAnswers: answers,
             challengerScore: score,
           })
-          .where(eq(require("@shared/schema").asyncBattles.id, battleId));
+          .where(eq(asyncBattles.id, battleId));
       } else {
-        const [updated] = await db.update(require("@shared/schema").asyncBattles)
+        const [updated] = await db.update(asyncBattles)
           .set({
             opponentAnswers: answers,
             opponentScore: score,
           })
-          .where(eq(require("@shared/schema").asyncBattles.id, battleId))
+          .where(eq(asyncBattles.id, battleId))
           .returning();
         
         if (updated.challengerScore !== null && updated.opponentScore !== null) {
@@ -986,13 +1021,13 @@ Return ONLY valid JSON array:
             winnerId = updated.opponentId;
           }
           
-          await db.update(require("@shared/schema").asyncBattles)
+          await db.update(asyncBattles)
             .set({
               status: "completed",
               winnerId,
               completedAt: new Date(),
             })
-            .where(eq(require("@shared/schema").asyncBattles.id, battleId));
+            .where(eq(asyncBattles.id, battleId));
           
           if (winnerId) {
             await storage.addPoints(winnerId, 50, "Battle victory");
@@ -1011,9 +1046,6 @@ Return ONLY valid JSON array:
     if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
     try {
       const user = req.user as User;
-      const { asyncBattles } = require("@shared/schema");
-      const { or } = require("drizzle-orm");
-      
       const battles = await db.select()
         .from(asyncBattles)
         .where(or(

@@ -2,10 +2,31 @@ import fs from "node:fs";
 import OpenAI, { toFile } from "openai";
 import { Buffer } from "node:buffer";
 
-export const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-});
+// Lazy initialize OpenAI client to avoid crashes when API keys are not set
+let openaiInstance: OpenAI | null = null;
+
+function getOpenAI(): OpenAI {
+  if (!openaiInstance) {
+    const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+    const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+    
+    if (!apiKey) {
+      throw new Error("OpenAI API key is not configured. Please set up the OpenAI integration.");
+    }
+    
+    openaiInstance = new OpenAI({
+      apiKey,
+      baseURL,
+    });
+  }
+  return openaiInstance;
+}
+
+export const openai = {
+  get images() {
+    return getOpenAI().images;
+  }
+};
 
 /**
  * Generate an image and return as Buffer.

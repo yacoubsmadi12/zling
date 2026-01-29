@@ -6,10 +6,34 @@ import { randomUUID } from "crypto";
 import { tmpdir } from "os";
 import { join } from "path";
 
-export const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-});
+// Lazy initialize OpenAI client to avoid crashes when API keys are not set
+let openaiInstance: OpenAI | null = null;
+
+function getOpenAI(): OpenAI {
+  if (!openaiInstance) {
+    const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+    const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+    
+    if (!apiKey) {
+      throw new Error("OpenAI API key is not configured. Please set up the OpenAI integration.");
+    }
+    
+    openaiInstance = new OpenAI({
+      apiKey,
+      baseURL,
+    });
+  }
+  return openaiInstance;
+}
+
+export const openai = {
+  get chat() {
+    return getOpenAI().chat;
+  },
+  get audio() {
+    return getOpenAI().audio;
+  }
+};
 
 export type AudioFormat = "wav" | "mp3" | "webm" | "mp4" | "ogg" | "unknown";
 

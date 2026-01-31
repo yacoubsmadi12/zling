@@ -46,7 +46,7 @@ export function MonthlyPuzzle() {
     <Card className="overflow-hidden border-2 border-primary/20 rounded-[2rem] bg-card/50 backdrop-blur-sm">
       <div className="relative h-64 md:h-80 overflow-hidden">
         <img 
-          src={puzzle.imageUrl} 
+          src={puzzle.imageUrl || undefined} 
           alt="Monthly Puzzle" 
           className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
         />

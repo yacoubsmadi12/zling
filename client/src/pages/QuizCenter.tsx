@@ -4,7 +4,6 @@ import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Brain, Swords, Sparkles, Timer, Zap, Volume2, ShieldAlert, Skull } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { MonthlyPuzzle } from "@/components/puzzles/MonthlyPuzzle";
 
 const modes = [
   {
@@ -155,10 +154,6 @@ export default function QuizCenter() {
                   </motion.div>
                 </Link>
               ))}
-            </div>
-
-            <div className="mt-12">
-              <MonthlyPuzzle />
             </div>
           </div>
         </div>

@@ -266,9 +266,16 @@ export async function registerRoutes(
         const jsonStr = content.replace(/```json\n?|\n?```/g, '').trim();
         const data = JSON.parse(jsonStr);
 
-        // Generate anime style image
-        const { generateImage } = await import("./replit_integrations/image/client");
-        const animeImageUrl = await generateImage(`${data.image_prompt}, high quality anime style, vibrant colors, cinematic lighting, 2D illustration`);
+        let animeImageUrl = null;
+        try {
+          // Attempt to generate anime style image if OpenAI is configured
+          const { generateImage } = await import("./replit_integrations/image/client");
+          animeImageUrl = await generateImage(`${data.image_prompt}, high quality anime style, vibrant colors, cinematic lighting, 2D illustration`);
+        } catch (imgError) {
+          console.error("Failed to generate AI image for puzzle, using placeholder:", imgError);
+          // High quality placeholder with anime vibe
+          animeImageUrl = "https://images.unsplash.com/photo-1578632292335-df3abbb0d586?q=80&w=1000&auto=format&fit=crop";
+        }
 
         puzzle = await storage.createMonthlyPuzzle({
           department,

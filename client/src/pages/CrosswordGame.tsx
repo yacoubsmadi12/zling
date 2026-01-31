@@ -33,6 +33,11 @@ interface WordPlacement {
   num: number;
 }
 
+interface CrosswordResponse {
+  grid: CrosswordCell[][];
+  placements: WordPlacement[];
+}
+
 export default function CrosswordGame() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -41,16 +46,25 @@ export default function CrosswordGame() {
   const [selectedCell, setSelectedCell] = useState<{ x: number, y: number } | null>(null);
   const [isWon, setIsWon] = useState(false);
 
-  const { data: puzzleData, isLoading: isAiLoading } = useQuery({
+  const { data: puzzleData, isLoading: isAiLoading } = useQuery<CrosswordResponse>({
     queryKey: ["/api/crossword/generate", user?.department],
     enabled: !!user?.department,
     staleTime: Infinity,
   });
 
+  const addPointsMutation = useMutation({
+    mutationFn: async (points: number) => {
+      await apiRequest("POST", "/api/user/points", { points, reason: "Crossword Challenge Completed" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    }
+  });
+
   useEffect(() => {
-    if (puzzleData) {
+    if (puzzleData && puzzleData.grid) {
       setGrid(puzzleData.grid);
-      setPlacements(puzzleData.placements);
+      setPlacements(puzzleData.placements || []);
       setIsWon(false);
     }
   }, [puzzleData]);

@@ -80,7 +80,7 @@ export default function CrosswordGame() {
 
     // Place first word in middle across
     const first = shuffled[0];
-    const firstWord = first.term.toUpperCase().replace(/\s/g, "");
+    const firstWord = first.term.toUpperCase().replace(/[^A-Z]/g, "");
     const startX = Math.floor((size - firstWord.length) / 2);
     const startY = Math.floor(size / 2);
 
@@ -106,7 +106,7 @@ export default function CrosswordGame() {
     // Try to place other words (simple intersection)
     for (let i = 1; i < shuffled.length; i++) {
       const term = shuffled[i];
-      const word = term.term.toUpperCase().replace(/\s/g, "");
+      const word = term.term.toUpperCase().replace(/[^A-Z]/g, "");
       let placed = false;
 
       for (let j = 0; j < word.length && !placed; j++) {
@@ -173,7 +173,12 @@ export default function CrosswordGame() {
   const handleCellInput = (x: number, y: number, val: string) => {
     if (isWon) return;
     const newGrid = [...grid.map(row => [...row])];
-    newGrid[y][x].userChar = val.toUpperCase().slice(-1);
+    const char = val.toUpperCase().slice(-1);
+    
+    // Only allow letters
+    if (char && !/[A-Z]/.test(char) && char !== "") return;
+    
+    newGrid[y][x].userChar = char;
     setGrid(newGrid);
 
     // Check win condition

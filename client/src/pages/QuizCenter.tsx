@@ -46,36 +46,6 @@ const miniGames = [
     badge: "Flash Speed",
     href: "/quiz/word-rush"
   },
-  {
-    id: "match-meaning",
-    title: "Match the Meaning",
-    desc: "Choose the correct meaning from 3 options.",
-    icon: Brain,
-    color: "from-indigo-400 to-purple-500",
-    points: "10 Points",
-    badge: "Master Mind",
-    href: "/quiz/match-meaning"
-  },
-  {
-    id: "listen-tap",
-    title: "Audio Tap",
-    desc: "Hear a word and quickly choose its meaning.",
-    icon: Volume2,
-    color: "from-cyan-400 to-blue-500",
-    points: "50 Points",
-    badge: "Sharp Ear",
-    href: "/quiz/listen-tap"
-  },
-  {
-    id: "survival",
-    title: "Survival",
-    desc: "Wrong = Elimination. How long can you last?",
-    icon: ShieldAlert,
-    color: "from-red-500 to-rose-700",
-    points: "100 Points",
-    badge: "Survivor",
-    href: "/quiz/survival"
-  },
 ];
 
 export default function QuizCenter() {

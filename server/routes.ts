@@ -256,10 +256,11 @@ export async function registerRoutes(
       
       if (!puzzle) {
         const prompt = `Create a professional and engaging logic puzzle for the ${department} department of a telecom operator. 
-        Style: Game-like, adventurous. 
+        Style: Adventure game, Anime/Cartoon aesthetic. 
         The puzzle should be related to ${department} concepts.
         Include a 'title', 'description', and the 'puzzle_data' which contains 'question' and 'answer'.
-        Also provide a highly descriptive 'image_prompt' for an anime-style scene representing this puzzle.
+        Also provide a highly descriptive 'image_prompt' for a vibrant, clean ANIME CARTOON style scene representing this puzzle. 
+        Focus on: Bold outlines, vibrant flat colors, high-quality 2D digital illustration, cel-shaded anime style.
         Format as JSON: { "title": "...", "description": "...", "puzzle_data": { "question": "...", "answer": "..." }, "image_prompt": "..." }`;
 
         const content = await generateContent(prompt);
@@ -270,11 +271,11 @@ export async function registerRoutes(
         try {
           // Attempt to generate anime style image if OpenAI is configured
           const { generateImage } = await import("./replit_integrations/image/client");
-          animeImageUrl = await generateImage(`${data.image_prompt}, high quality anime style, vibrant colors, cinematic lighting, 2D illustration`);
+          animeImageUrl = await generateImage(`${data.image_prompt}, high quality 2D anime cartoon style, bold lines, cel-shaded, vibrant flat colors, cinematic anime 2D illustration, no 3D render`);
         } catch (imgError) {
           console.error("Failed to generate AI image for puzzle, using placeholder:", imgError);
-          // High quality placeholder with anime vibe
-          animeImageUrl = "https://images.unsplash.com/photo-1578632292335-df3abbb0d586?q=80&w=1000&auto=format&fit=crop";
+          // Anime cartoon style placeholder
+          animeImageUrl = "https://images.unsplash.com/photo-1541562232579-512a21359920?q=80&w=1000&auto=format&fit=crop";
         }
 
         puzzle = await storage.createMonthlyPuzzle({

@@ -1,14 +1,12 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Navigation } from "@/components/Navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Term } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Trophy, ArrowLeft, RefreshCw, CheckCircle2, Lightbulb, Zap } from "lucide-react";
+import { Trophy, ArrowLeft, RefreshCw, CheckCircle2, Lightbulb, Zap, ShieldAlert } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
@@ -46,10 +44,11 @@ export default function CrosswordGame() {
   const [selectedCell, setSelectedCell] = useState<{ x: number, y: number } | null>(null);
   const [isWon, setIsWon] = useState(false);
 
-  const { data: puzzleData, isLoading: isAiLoading } = useQuery<CrosswordResponse>({
+  const { data: puzzleData, isLoading: isAiLoading, error } = useQuery<CrosswordResponse>({
     queryKey: ["/api/crossword/generate", user?.department],
     enabled: !!user?.department,
-    staleTime: Infinity,
+    staleTime: 0,
+    retry: 1
   });
 
   const addPointsMutation = useMutation({
@@ -69,141 +68,16 @@ export default function CrosswordGame() {
     }
   }, [puzzleData]);
 
-  const generatePuzzle = (availableTerms: Term[]) => {
-    // Simple crossword generation logic
-    const size = 12;
-    const newGrid: CrosswordCell[][] = Array(size).fill(null).map((_, y) => 
-      Array(size).fill(null).map((_, x) => ({
-        char: "",
-        isBlocked: true,
-        userChar: "",
-        x,
-        y
-      }))
-    );
-
-    const shuffled = [...availableTerms].sort(() => Math.random() - 0.5).slice(0, 8);
-    const newPlacements: WordPlacement[] = [];
-    let wordNum = 1;
-
-    // Filter terms to ensure they have content
-    const validTerms = shuffled.filter(t => t.term && t.term.trim().length > 0);
-    if (validTerms.length === 0) {
-      console.error("No valid terms found for crossword");
-      return;
-    }
-
-    // Place first word in middle across
-    const first = validTerms[0];
-    const firstWord = first.term.toUpperCase().replace(/[^A-Z]/g, "");
-    if (!firstWord) return;
-
-    const startX = Math.max(0, Math.floor((size - firstWord.length) / 2));
-    const startY = Math.floor(size / 2);
-
-    for (let i = 0; i < firstWord.length; i++) {
-      newGrid[startY][startX + i] = {
-        char: firstWord[i],
-        isBlocked: false,
-        userChar: "",
-        acrossNum: i === 0 ? wordNum : undefined,
-        x: startX + i,
-        y: startY
-      };
-    }
-    newPlacements.push({
-      word: firstWord,
-      definition: first.definition,
-      x: startX,
-      y: startY,
-      direction: "across",
-      num: wordNum++
-    });
-
-    // Try to place other words
-    for (let i = 1; i < validTerms.length; i++) {
-      const term = validTerms[i];
-      const word = term.term.toUpperCase().replace(/[^A-Z]/g, "");
-      if (!word) continue;
-      
-      let placed = false;
-      // Try every intersection point
-      for (let j = 0; j < word.length && !placed; j++) {
-        for (let py = 0; py < size && !placed; py++) {
-          for (let px = 0; px < size && !placed; px++) {
-            if (!newGrid[py][px].isBlocked && newGrid[py][px].char === word[j]) {
-              // Try placing vertically (down)
-              const dStartX = px;
-              const dStartY = py - j;
-              
-              if (dStartY >= 0 && dStartY + word.length < size) {
-                let canPlace = true;
-                for (let k = 0; k < word.length; k++) {
-                  const targetY = dStartY + k;
-                  if (targetY === py) continue;
-                  
-                  // Must be blocked or match existing char
-                  if (!newGrid[targetY][px].isBlocked && newGrid[targetY][px].char !== word[k]) {
-                    canPlace = false;
-                    break;
-                  }
-                  
-                  // Neighbors check (must not touch other words sideways)
-                  if (newGrid[targetY][px].isBlocked) {
-                    if ((px > 0 && !newGrid[targetY][px-1].isBlocked) || 
-                        (px < size - 1 && !newGrid[targetY][px+1].isBlocked) ||
-                        (k === 0 && dStartY > 0 && !newGrid[dStartY-1][px].isBlocked) ||
-                        (k === word.length - 1 && dStartY + word.length < size && !newGrid[dStartY + word.length][px].isBlocked)) {
-                      canPlace = false;
-                      break;
-                    }
-                  }
-                }
-
-                if (canPlace) {
-                  for (let k = 0; k < word.length; k++) {
-                    const targetY = dStartY + k;
-                    newGrid[targetY][px] = {
-                      ...newGrid[targetY][px],
-                      char: word[k],
-                      isBlocked: false,
-                      downNum: k === 0 ? wordNum : newGrid[targetY][px].downNum
-                    };
-                  }
-                  newPlacements.push({
-                    word,
-                    definition: term.definition,
-                    x: px,
-                    y: dStartY,
-                    direction: "down",
-                    num: wordNum++
-                  });
-                  placed = true;
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
-    setGrid(newGrid);
-    setPlacements(newPlacements);
-    setIsWon(false);
-  };
-
   const handleCellInput = (x: number, y: number, val: string) => {
     if (isWon) return;
     const newGrid = [...grid.map(row => [...row])];
     const char = val.toUpperCase().slice(-1);
     
-    // Only allow letters
     if (char && !/[A-Z]/.test(char) && char !== "") return;
     
     newGrid[y][x].userChar = char;
     setGrid(newGrid);
 
-    // Check win condition
     const allCorrect = newGrid.every(row => 
       row.every(cell => cell.isBlocked || cell.char === cell.userChar)
     );
@@ -223,7 +97,25 @@ export default function CrosswordGame() {
     }
   };
 
-  if (isAiLoading) return <div className="flex items-center justify-center h-screen">AI is crafting your puzzle...</div>;
+  if (isAiLoading) return (
+    <div className="flex flex-col items-center justify-center h-screen space-y-4">
+      <RefreshCw className="w-8 h-8 animate-spin text-primary" />
+      <p className="text-lg font-medium">AI is crafting your professional puzzle...</p>
+    </div>
+  );
+
+  if (error) return (
+    <div className="flex flex-col items-center justify-center h-screen space-y-4 p-4 text-center">
+      <div className="p-4 bg-destructive/10 text-destructive rounded-full">
+        <ShieldAlert className="w-12 h-12" />
+      </div>
+      <h2 className="text-2xl font-bold">AI is currently busy</h2>
+      <p className="text-muted-foreground max-w-md">We couldn't generate the crossword. Try again in a moment.</p>
+      <Button onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/crossword/generate"] })}>
+        Try Again
+      </Button>
+    </div>
+  );
 
   return (
     <div className="flex min-h-screen bg-background pb-20 md:pb-0">

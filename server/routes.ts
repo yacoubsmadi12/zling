@@ -488,6 +488,8 @@ export async function registerRoutes(
       2. Arrange them in a 12x12 grid.
       3. For each word, provide: 'word', 'definition', 'x' (0-11), 'y' (0-11), 'direction' ('across' or 'down'), and 'num' (1-8).
       
+      CRITICAL: The response MUST be a RAW JSON object. DO NOT include markdown formatting like \`\`\`json.
+      
       The response MUST be a JSON object with:
       - "grid": A 12x12 array where each element is { "char": string, "isBlocked": boolean, "userChar": "", "x": number, "y": number, "acrossNum"?: number, "downNum"?: number }
       - "placements": An array of { "word": string, "definition": string, "x": number, "y": number, "direction": "across" | "down", "num": number }
@@ -495,14 +497,21 @@ export async function registerRoutes(
       Ensure words intersect correctly in the grid.
       Format: { "grid": [...], "placements": [...] }`;
 
+      console.log(`Generating crossword for ${department}...`);
       const contentText = await generateContent(prompt);
-      const jsonStr = contentText.replace(/```json\n?|\n?```/g, '').trim();
-      const data = JSON.parse(jsonStr);
       
+      // Better JSON cleaning
+      let cleanJson = contentText;
+      if (cleanJson.includes("```")) {
+        cleanJson = cleanJson.replace(/```json\n?|\n?```/g, "").trim();
+      }
+      
+      const data = JSON.parse(cleanJson);
+      console.log("Crossword generated successfully");
       res.json(data);
     } catch (error) {
       console.error("Crossword Gen Error:", error);
-      res.status(500).json({ message: "Failed to generate crossword" });
+      res.status(500).json({ message: "Failed to generate crossword", error: String(error) });
     }
   });
 

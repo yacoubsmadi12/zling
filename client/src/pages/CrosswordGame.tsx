@@ -74,14 +74,23 @@ export default function CrosswordGame() {
       }))
     );
 
-    const shuffled = [...availableTerms].sort(() => Math.random() - 0.5).slice(0, 6);
+    const shuffled = [...availableTerms].sort(() => Math.random() - 0.5).slice(0, 8);
     const newPlacements: WordPlacement[] = [];
     let wordNum = 1;
 
+    // Filter terms to ensure they have content
+    const validTerms = shuffled.filter(t => t.term && t.term.trim().length > 0);
+    if (validTerms.length === 0) {
+      console.error("No valid terms found for crossword");
+      return;
+    }
+
     // Place first word in middle across
-    const first = shuffled[0];
+    const first = validTerms[0];
     const firstWord = first.term.toUpperCase().replace(/[^A-Z]/g, "");
-    const startX = Math.floor((size - firstWord.length) / 2);
+    if (!firstWord) return;
+
+    const startX = Math.max(0, Math.floor((size - firstWord.length) / 2));
     const startY = Math.floor(size / 2);
 
     for (let i = 0; i < firstWord.length; i++) {
@@ -103,61 +112,66 @@ export default function CrosswordGame() {
       num: wordNum++
     });
 
-    // Try to place other words (simple intersection)
-    for (let i = 1; i < shuffled.length; i++) {
-      const term = shuffled[i];
+    // Try to place other words
+    for (let i = 1; i < validTerms.length; i++) {
+      const term = validTerms[i];
       const word = term.term.toUpperCase().replace(/[^A-Z]/g, "");
+      if (!word) continue;
+      
       let placed = false;
-
+      // Try every intersection point
       for (let j = 0; j < word.length && !placed; j++) {
         for (let py = 0; py < size && !placed; py++) {
           for (let px = 0; px < size && !placed; px++) {
             if (!newGrid[py][px].isBlocked && newGrid[py][px].char === word[j]) {
-              // Try down
-              let canPlace = true;
+              // Try placing vertically (down)
               const dStartX = px;
               const dStartY = py - j;
               
-              if (dStartY < 0 || dStartY + word.length >= size) canPlace = false;
-              
-              if (canPlace) {
+              if (dStartY >= 0 && dStartY + word.length < size) {
+                let canPlace = true;
                 for (let k = 0; k < word.length; k++) {
                   const targetY = dStartY + k;
                   if (targetY === py) continue;
+                  
+                  // Must be blocked or match existing char
                   if (!newGrid[targetY][px].isBlocked && newGrid[targetY][px].char !== word[k]) {
                     canPlace = false;
                     break;
                   }
-                  // Check neighbors
+                  
+                  // Neighbors check (must not touch other words sideways)
                   if (newGrid[targetY][px].isBlocked) {
                     if ((px > 0 && !newGrid[targetY][px-1].isBlocked) || 
-                        (px < size - 1 && !newGrid[targetY][px+1].isBlocked)) {
+                        (px < size - 1 && !newGrid[targetY][px+1].isBlocked) ||
+                        (k === 0 && dStartY > 0 && !newGrid[dStartY-1][px].isBlocked) ||
+                        (k === word.length - 1 && dStartY + word.length < size && !newGrid[dStartY + word.length][px].isBlocked)) {
                       canPlace = false;
                       break;
                     }
                   }
                 }
-              }
 
-              if (canPlace) {
-                for (let k = 0; k < word.length; k++) {
-                  const targetY = dStartY + k;
-                  newGrid[targetY][px] = {
-                    ...newGrid[targetY][px],
-                    char: word[k],
-                    isBlocked: false,
-                    downNum: k === 0 ? wordNum : newGrid[targetY][px].downNum
-                  };
+                if (canPlace) {
+                  for (let k = 0; k < word.length; k++) {
+                    const targetY = dStartY + k;
+                    newGrid[targetY][px] = {
+                      ...newGrid[targetY][px],
+                      char: word[k],
+                      isBlocked: false,
+                      downNum: k === 0 ? wordNum : newGrid[targetY][px].downNum
+                    };
+                  }
+                  newPlacements.push({
+                    word,
+                    definition: term.definition,
+                    x: px,
+                    y: dStartY,
+                    direction: "down",
+                    num: wordNum++
+                  });
+                  placed = true;
                 }
-                newPlacements.push({
-                  word,
-                  definition: term.definition,
-                  x: px,
-                  y: dStartY,
-                  direction: "down",
-                  num: wordNum++
-                });
-                placed = true;
               }
             }
           }
@@ -222,32 +236,31 @@ export default function CrosswordGame() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <Card className="lg:col-span-2 p-6 rounded-3xl border shadow-xl bg-card">
+            <Card className="lg:col-span-2 p-4 md:p-8 rounded-3xl border shadow-xl bg-card overflow-hidden">
               <div 
-                className="grid gap-1 mx-auto" 
+                className="grid gap-1 md:gap-2 mx-auto" 
                 style={{ 
-                  gridTemplateColumns: `repeat(${grid[0]?.length || 0}, minmax(0, 1fr))`,
-                  maxWidth: "500px"
+                  gridTemplateColumns: `repeat(${grid[0]?.length || 12}, minmax(0, 1fr))`,
+                  maxWidth: "600px"
                 }}
               >
                 {grid.map((row, y) => row.map((cell, x) => (
                   <div 
                     key={`${x}-${y}`} 
                     className={cn(
-                      "aspect-square relative rounded-md border flex items-center justify-center text-xl font-bold transition-all",
-                      cell.isBlocked ? "bg-zinc-200 dark:bg-zinc-800 border-transparent" : "bg-white dark:bg-zinc-900 border-muted-foreground/20 shadow-sm",
-                      selectedCell?.x === x && selectedCell?.y === y && "ring-2 ring-primary border-primary"
+                      "aspect-square relative rounded-sm md:rounded-md border flex items-center justify-center text-sm md:text-xl font-bold transition-all",
+                      cell.isBlocked ? "bg-zinc-200/50 dark:bg-zinc-800/50 border-transparent" : "bg-white dark:bg-zinc-900 border-muted-foreground/20 shadow-sm",
+                      selectedCell?.x === x && selectedCell?.y === y && "ring-2 ring-primary border-primary z-10"
                     )}
-                    onClick={() => !cell.isBlocked && setSelectedCell({ x, y })}
                   >
                     {!cell.isBlocked && (
                       <>
-                        <span className="absolute top-0.5 left-0.5 text-[8px] text-muted-foreground leading-none">
+                        <span className="absolute top-0.5 left-0.5 text-[6px] md:text-[8px] text-muted-foreground leading-none font-medium">
                           {cell.acrossNum || cell.downNum}
                         </span>
                         <input
                           type="text"
-                          className="w-full h-full text-center bg-transparent outline-none uppercase"
+                          className="w-full h-full text-center bg-transparent outline-none uppercase p-0"
                           value={cell.userChar}
                           onChange={(e) => handleCellInput(x, y, e.target.value)}
                           onFocus={() => setSelectedCell({ x, y })}

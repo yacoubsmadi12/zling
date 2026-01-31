@@ -8,9 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Trophy, ArrowLeft, RefreshCw, CheckCircle2, Lightbulb } from "lucide-react";
+import { Trophy, ArrowLeft, RefreshCw, CheckCircle2, Lightbulb, Zap } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
 
 interface CrosswordCell {

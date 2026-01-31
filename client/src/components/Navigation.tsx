@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import { Home, BookOpen, Trophy, User, LogOut, Sword, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function Navigation() {
   const [location] = useLocation();
@@ -53,7 +54,11 @@ export function Navigation() {
           })}
         </nav>
 
-        <div className="p-4 border-t">
+        <div className="p-4 border-t space-y-4">
+          <div className="flex items-center justify-between px-4">
+            <span className="text-sm font-medium text-muted-foreground">Theme</span>
+            <ThemeToggle />
+          </div>
           <button
             onClick={() => logoutMutation.mutate()}
             className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"

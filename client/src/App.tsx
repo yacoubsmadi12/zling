@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/use-auth";
+import { ThemeProvider } from "@/hooks/use-theme";
 import { ProtectedRoute } from "@/lib/protected-route";
 
 // Pages
@@ -47,12 +48,14 @@ function Router() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <Router />
-          <Toaster />
-        </TooltipProvider>
-      </AuthProvider>
+      <ThemeProvider defaultTheme="light" storageKey="zlingo-theme">
+        <AuthProvider>
+          <TooltipProvider>
+            <Router />
+            <Toaster />
+          </TooltipProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

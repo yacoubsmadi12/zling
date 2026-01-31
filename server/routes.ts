@@ -475,6 +475,37 @@ export async function registerRoutes(
   });
 
 
+  // --- Crossword Game API ---
+  app.get("/api/crossword/generate", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const user = req.user as User;
+      const department = (req.query.department as string) || user.department;
+      
+      const prompt = `You are a professional crossword creator for a telecom company.
+      Create a crossword puzzle for the ${department} department.
+      1. Select 8 technical or professional terms related to ${department}.
+      2. Arrange them in a 12x12 grid.
+      3. For each word, provide: 'word', 'definition', 'x' (0-11), 'y' (0-11), 'direction' ('across' or 'down'), and 'num' (1-8).
+      
+      The response MUST be a JSON object with:
+      - "grid": A 12x12 array where each element is { "char": string, "isBlocked": boolean, "userChar": "", "x": number, "y": number, "acrossNum"?: number, "downNum"?: number }
+      - "placements": An array of { "word": string, "definition": string, "x": number, "y": number, "direction": "across" | "down", "num": number }
+      
+      Ensure words intersect correctly in the grid.
+      Format: { "grid": [...], "placements": [...] }`;
+
+      const contentText = await generateContent(prompt);
+      const jsonStr = contentText.replace(/```json\n?|\n?```/g, '').trim();
+      const data = JSON.parse(jsonStr);
+      
+      res.json(data);
+    } catch (error) {
+      console.error("Crossword Gen Error:", error);
+      res.status(500).json({ message: "Failed to generate crossword" });
+    }
+  });
+
   // --- Socket.IO Setup ---
   const io = new SocketIOServer(httpServer, {
     path: "/socket.io",

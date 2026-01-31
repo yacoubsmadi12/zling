@@ -41,25 +41,19 @@ export default function CrosswordGame() {
   const [selectedCell, setSelectedCell] = useState<{ x: number, y: number } | null>(null);
   const [isWon, setIsWon] = useState(false);
 
-  const { data: terms, isLoading } = useQuery<Term[]>({
-    queryKey: ["/api/terms", user?.department],
-    enabled: !!user?.department
-  });
-
-  const addPointsMutation = useMutation({
-    mutationFn: async (points: number) => {
-      await apiRequest("POST", "/api/user/points", { points, reason: "Crossword Challenge Completed" });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-    }
+  const { data: puzzleData, isLoading: isAiLoading } = useQuery({
+    queryKey: ["/api/crossword/generate", user?.department],
+    enabled: !!user?.department,
+    staleTime: Infinity,
   });
 
   useEffect(() => {
-    if (terms && terms.length >= 5) {
-      generatePuzzle(terms);
+    if (puzzleData) {
+      setGrid(puzzleData.grid);
+      setPlacements(puzzleData.placements);
+      setIsWon(false);
     }
-  }, [terms]);
+  }, [puzzleData]);
 
   const generatePuzzle = (availableTerms: Term[]) => {
     // Simple crossword generation logic
@@ -215,7 +209,7 @@ export default function CrosswordGame() {
     }
   };
 
-  if (isLoading) return <div className="flex items-center justify-center h-screen">Loading Challenge...</div>;
+  if (isAiLoading) return <div className="flex items-center justify-center h-screen">AI is crafting your puzzle...</div>;
 
   return (
     <div className="flex min-h-screen bg-background pb-20 md:pb-0">
@@ -229,8 +223,8 @@ export default function CrosswordGame() {
               </Button>
             </Link>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => terms && generatePuzzle(terms)}>
-                <RefreshCw className="w-4 h-4 mr-2" /> Reset
+              <Button variant="outline" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/crossword/generate"] })}>
+                <RefreshCw className="w-4 h-4 mr-2" /> New Puzzle
               </Button>
             </div>
           </div>

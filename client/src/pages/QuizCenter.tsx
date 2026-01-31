@@ -46,6 +46,16 @@ const miniGames = [
     badge: "Flash Speed",
     href: "/quiz/word-rush"
   },
+  {
+    id: "crossword",
+    title: "Crossword",
+    desc: "Solve professional field puzzles based on definitions.",
+    icon: Brain,
+    color: "from-emerald-400 to-teal-600",
+    points: "50pts/win",
+    badge: "Expert Mind",
+    href: "/crossword"
+  },
 ];
 
 export default function QuizCenter() {

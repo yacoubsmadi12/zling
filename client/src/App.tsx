@@ -17,6 +17,7 @@ import QuizRunner from "@/pages/QuizRunner";
 import TermDuel from "@/pages/TermDuel";
 import DailyMix from "@/pages/DailyMix";
 import LiveBattle from "@/pages/LiveBattle";
+import CrosswordGame from "@/pages/CrosswordGame";
 import Leaderboard from "@/pages/Leaderboard";
 import Profile from "@/pages/Profile";
 import AdminDashboard from "@/pages/admin-dashboard";
@@ -37,6 +38,7 @@ function Router() {
       <ProtectedRoute path="/term-duel" component={TermDuel} />
       <ProtectedRoute path="/daily-mix" component={DailyMix} />
       <ProtectedRoute path="/live-battle" component={LiveBattle} />
+      <ProtectedRoute path="/crossword" component={CrosswordGame} />
       <ProtectedRoute path="/leaderboard" component={Leaderboard} />
       <ProtectedRoute path="/profile" component={Profile} />
       

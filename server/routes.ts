@@ -6,7 +6,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import OpenAI from "openai";
 import { Server as SocketIOServer } from "socket.io";
-import { User, insertLdapSettingsSchema, insertRewardSchema, users, aiDuels, dailyStreaks, asyncBattles, terms } from "@shared/schema";
+import { User, insertLdapSettingsSchema, insertRewardSchema, users, aiDuels, dailyStreaks, asyncBattles, terms, monthlyPuzzles } from "@shared/schema";
 import { db } from "./db";
 import { eq, or, and, desc } from "drizzle-orm";
 import { registerImageRoutes } from "./replit_integrations/image";
@@ -241,6 +241,83 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Word Rush Error:", error);
       res.status(500).json({ message: "Failed to fetch words for Word Rush" });
+    }
+  });
+
+  app.get("/api/ai/monthly-puzzle", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const user = req.user as User;
+      const now = new Date();
+      const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const department = user.department;
+
+      let puzzle = await storage.getMonthlyPuzzle(department, month);
+      
+      if (!puzzle) {
+        const prompt = `Create a professional and engaging logic puzzle for the ${department} department of a telecom operator. 
+        Style: Game-like, adventurous. 
+        The puzzle should be related to ${department} concepts.
+        Include a 'title', 'description', and the 'puzzle_data' which contains 'question' and 'answer'.
+        Also provide a highly descriptive 'image_prompt' for an anime-style scene representing this puzzle.
+        Format as JSON: { "title": "...", "description": "...", "puzzle_data": { "question": "...", "answer": "..." }, "image_prompt": "..." }`;
+
+        const content = await generateContent(prompt);
+        const jsonStr = content.replace(/```json\n?|\n?```/g, '').trim();
+        const data = JSON.parse(jsonStr);
+
+        // Generate anime style image
+        const { generateImage } = await import("./replit_integrations/image/client");
+        const animeImageUrl = await generateImage(`${data.image_prompt}, high quality anime style, vibrant colors, cinematic lighting, 2D illustration`);
+
+        puzzle = await storage.createMonthlyPuzzle({
+          department,
+          month,
+          title: data.title,
+          description: data.description,
+          puzzleData: data.puzzle_data,
+          imagePrompt: data.image_prompt,
+          imageUrl: animeImageUrl,
+          pointsReward: 100
+        });
+      }
+
+      const attempt = await storage.getPuzzleAttempt(user.id, puzzle.id);
+      if (!attempt) {
+        await storage.createPuzzleAttempt({
+          userId: user.id,
+          puzzleId: puzzle.id,
+          status: "started"
+        });
+      }
+
+      res.json({ puzzle, solved: attempt?.status === "solved" });
+    } catch (error) {
+      console.error("Monthly Puzzle Error:", error);
+      res.status(500).json({ message: "Failed to fetch/generate monthly puzzle" });
+    }
+  });
+
+  app.post("/api/ai/monthly-puzzle/solve", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const { puzzleId, answer } = req.body;
+      const user = req.user as User;
+      
+      const puzzle = await db.select().from(monthlyPuzzles).where(eq(monthlyPuzzles.id, puzzleId)).limit(1);
+      if (!puzzle[0]) return res.status(404).json({ message: "Puzzle not found" });
+
+      const isCorrect = answer.toLowerCase().trim() === (puzzle[0].puzzleData as any).answer.toLowerCase().trim();
+      
+      if (isCorrect) {
+        await storage.solvePuzzle(user.id, puzzleId);
+        res.json({ correct: true, message: "Correct! Points awarded." });
+      } else {
+        res.json({ correct: false, message: "Wrong answer. Try again!" });
+      }
+    } catch (error) {
+      console.error("Solve Puzzle Error:", error);
+      res.status(500).json({ message: "Failed to solve puzzle" });
     }
   });
 

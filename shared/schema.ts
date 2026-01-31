@@ -182,7 +182,34 @@ export const userBadgesRelations = relations(userBadges, ({ one }) => ({
   }),
 }));
 
+// Monthly puzzles
+export const monthlyPuzzles = pgTable("monthly_puzzles", {
+  id: serial("id").primaryKey(),
+  department: text("department").notNull(),
+  month: text("month").notNull(), // YYYY-MM
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  puzzleData: jsonb("puzzle_data").notNull(), // { type: 'logic' | 'visual' | 'code', content: ... }
+  imagePrompt: text("image_prompt").notNull(),
+  imageUrl: text("image_url"),
+  pointsReward: integer("points_reward").default(100).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userPuzzleAttempts = pgTable("user_puzzle_attempts", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  puzzleId: integer("puzzle_id").notNull(),
+  status: text("status").notNull(), // started, solved
+  solvedAt: timestamp("solved_at"),
+});
+
 // Zod Schemas
+export const insertMonthlyPuzzleSchema = createInsertSchema(monthlyPuzzles).omit({ id: true, createdAt: true });
+export const insertUserPuzzleAttemptSchema = createInsertSchema(userPuzzleAttempts).omit({ id: true, solvedAt: true });
+
+export type MonthlyPuzzle = typeof monthlyPuzzles.$inferSelect;
+export type UserPuzzleAttempt = typeof userPuzzleAttempts.$inferSelect;
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, points: true, streak: true, lastLoginDate: true, role: true });
 export const insertLdapSettingsSchema = createInsertSchema(ldapSettings).omit({ id: true });
 export const insertRewardSchema = createInsertSchema(rewards).omit({ id: true });

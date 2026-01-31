@@ -1,9 +1,11 @@
 import { db } from "./db";
-import { users, terms, quizzes, badges, userBadges, ldapSettings, rewards, userRewards, dailyContent, userLearnedTerms, type User, type InsertUser, type Term, type InsertTerm, type Quiz, type InsertQuiz, type Badge, type InsertBadge, type UserBadge, type LdapSettings, type InsertLdapSettings, type Reward, type InsertReward, type UserReward, type UserLearnedTerm } from "@shared/schema";
+import { users, terms, quizzes, badges, userBadges, ldapSettings, rewards, userRewards, dailyContent, userLearnedTerms, monthlyPuzzles, userPuzzleAttempts, type User, type InsertUser, type Term, type InsertTerm, type Quiz, type InsertQuiz, type Badge, type InsertBadge, type UserBadge, type LdapSettings, type InsertLdapSettings, type Reward, type InsertReward, type UserReward, type UserLearnedTerm, type MonthlyPuzzle, type UserPuzzleAttempt } from "@shared/schema";
 import { eq, desc, sql, and, notInArray, inArray } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
+import { z } from "zod";
+import { insertMonthlyPuzzleSchema, insertUserPuzzleAttemptSchema } from "@shared/schema";
 
 const PostgresSessionStore = connectPg(session);
 
@@ -55,6 +57,13 @@ export interface IStorage {
   getUserLearnedTermsWithDetails(userId: number): Promise<(UserLearnedTerm & { term: Term })[]>;
   addPoints(userId: number, points: number, reason: string): Promise<User>;
   checkAndAwardPointsBadges(userId: number): Promise<void>;
+
+  // Monthly Puzzles
+  getMonthlyPuzzle(department: string, month: string): Promise<MonthlyPuzzle | undefined>;
+  createMonthlyPuzzle(puzzle: z.infer<typeof insertMonthlyPuzzleSchema>): Promise<MonthlyPuzzle>;
+  getPuzzleAttempt(userId: number, puzzleId: number): Promise<UserPuzzleAttempt | undefined>;
+  createPuzzleAttempt(attempt: z.infer<typeof insertUserPuzzleAttemptSchema>): Promise<UserPuzzleAttempt>;
+  solvePuzzle(userId: number, puzzleId: number): Promise<void>;
 
   // Mini Games
   getRandomTerms(limit: number): Promise<Term[]>;
@@ -324,6 +333,48 @@ export class DatabaseStorage implements IStorage {
 
   async getRandomTerms(limit: number): Promise<Term[]> {
     return db.select().from(terms).orderBy(sql`RANDOM()`).limit(limit);
+  }
+
+  // Monthly Puzzles
+  async getMonthlyPuzzle(department: string, month: string): Promise<MonthlyPuzzle | undefined> {
+    const [puzzle] = await db.select().from(monthlyPuzzles).where(
+      and(
+        eq(monthlyPuzzles.department, department),
+        eq(monthlyPuzzles.month, month)
+      )
+    );
+    return puzzle;
+  }
+
+  async createMonthlyPuzzle(puzzle: z.infer<typeof insertMonthlyPuzzleSchema>): Promise<MonthlyPuzzle> {
+    const [newPuzzle] = await db.insert(monthlyPuzzles).values(puzzle).returning();
+    return newPuzzle;
+  }
+
+  async getPuzzleAttempt(userId: number, puzzleId: number): Promise<UserPuzzleAttempt | undefined> {
+    const [attempt] = await db.select().from(userPuzzleAttempts).where(
+      and(
+        eq(userPuzzleAttempts.userId, userId),
+        eq(userPuzzleAttempts.puzzleId, puzzleId)
+      )
+    );
+    return attempt;
+  }
+
+  async createPuzzleAttempt(attempt: z.infer<typeof insertUserPuzzleAttemptSchema>): Promise<UserPuzzleAttempt> {
+    const [newAttempt] = await db.insert(userPuzzleAttempts).values(attempt).returning();
+    return newAttempt;
+  }
+
+  async solvePuzzle(userId: number, puzzleId: number): Promise<void> {
+    const puzzle = await db.select().from(monthlyPuzzles).where(eq(monthlyPuzzles.id, puzzleId)).limit(1);
+    if (!puzzle[0]) return;
+
+    await db.update(userPuzzleAttempts)
+      .set({ status: "solved", solvedAt: new Date() })
+      .where(and(eq(userPuzzleAttempts.userId, userId), eq(userPuzzleAttempts.puzzleId, puzzleId)));
+    
+    await this.addPoints(userId, puzzle[0].pointsReward, "Monthly Puzzle Solved");
   }
 }
 

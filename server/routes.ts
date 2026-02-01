@@ -528,8 +528,15 @@ export async function registerRoutes(
         if (!data.grid || !data.placements) {
           throw new Error("Invalid puzzle structure");
         }
+        
+        // Ensure data is structured correctly for frontend
+        const responseData = {
+          grid: Array.isArray(data.grid) ? data.grid : [],
+          placements: Array.isArray(data.placements) ? data.placements : []
+        };
+
         console.log("Crossword generated successfully for", department);
-        res.json(data);
+        res.json(responseData);
       } catch (parseError) {
         console.error("JSON Parse Error:", parseError, "Cleaned JSON:", cleanJson);
         throw new Error("AI returned malformed JSON. Please try again.");

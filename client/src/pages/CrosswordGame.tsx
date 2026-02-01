@@ -61,12 +61,14 @@ export default function CrosswordGame() {
   });
 
   useEffect(() => {
-    if (puzzleData && puzzleData.grid) {
+    if (puzzleData && Array.isArray(puzzleData.grid)) {
       console.log("Setting puzzle data:", puzzleData);
       setGrid([...puzzleData.grid]);
       setPlacements([...(puzzleData.placements || [])]);
       setIsWon(false);
       setSelectedCell(null);
+    } else if (puzzleData) {
+      console.error("Invalid puzzle data received:", puzzleData);
     }
   }, [puzzleData]);
 

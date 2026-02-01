@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Navigation } from "@/components/Navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Trophy, ArrowLeft, RefreshCw, CheckCircle2, Lightbulb, Zap, ShieldAlert } from "lucide-react";
+import { Trophy, ArrowLeft, RefreshCw, CheckCircle2, Lightbulb, Zap, ShieldAlert, Sparkles } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
@@ -43,12 +43,33 @@ export default function CrosswordGame() {
   const [placements, setPlacements] = useState<WordPlacement[]>([]);
   const [selectedCell, setSelectedCell] = useState<{ x: number, y: number } | null>(null);
   const [isWon, setIsWon] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [puzzleLoaded, setPuzzleLoaded] = useState(false);
 
-  const { data: puzzleData, isLoading: isAiLoading, error, refetch } = useQuery<CrosswordResponse>({
-    queryKey: ["/api/crossword/generate", user?.department],
-    enabled: !!user?.department,
-    staleTime: 0,
-    retry: 1
+  const generateMutation = useMutation({
+    mutationFn: async () => {
+      setIsLoading(true);
+      setHasError(false);
+      const res = await apiRequest("GET", `/api/crossword/generate?department=${user?.department}`);
+      return res.json() as Promise<CrosswordResponse>;
+    },
+    onSuccess: (data) => {
+      if (data && Array.isArray(data.grid)) {
+        setGrid([...data.grid]);
+        setPlacements([...(data.placements || [])]);
+        setIsWon(false);
+        setSelectedCell(null);
+        setPuzzleLoaded(true);
+      } else {
+        setHasError(true);
+      }
+      setIsLoading(false);
+    },
+    onError: () => {
+      setHasError(true);
+      setIsLoading(false);
+    }
   });
 
   const addPointsMutation = useMutation({
@@ -59,23 +80,6 @@ export default function CrosswordGame() {
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     }
   });
-
-  useEffect(() => {
-    if (puzzleData && Array.isArray(puzzleData.grid)) {
-      console.log("Setting puzzle data:", puzzleData);
-      setGrid([...puzzleData.grid]);
-      setPlacements([...(puzzleData.placements || [])]);
-      setIsWon(false);
-      setSelectedCell(null);
-    } else if (puzzleData) {
-      console.error("Invalid puzzle data received:", puzzleData);
-    }
-  }, [puzzleData]);
-
-  const handleRetry = () => {
-    queryClient.removeQueries({ queryKey: ["/api/crossword/generate"] });
-    refetch();
-  };
 
   const handleCellInput = (x: number, y: number, val: string) => {
     if (isWon) return;
@@ -106,21 +110,50 @@ export default function CrosswordGame() {
     }
   };
 
-  if (isAiLoading) return (
+  if (!puzzleLoaded && !isLoading && !hasError) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Navigation />
+        <main className="flex-1 md:ml-64 p-4 md:p-8 flex items-center justify-center">
+          <Card className="max-w-md w-full p-8 rounded-3xl border shadow-2xl text-center space-y-6 bg-card hover-elevate transition-all">
+            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+              <Sparkles className="w-10 h-10 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold">Professional Crossword</h2>
+              <p className="text-muted-foreground">Ready to test your knowledge in {user?.department}? AI will craft a custom puzzle just for you.</p>
+            </div>
+            <Button 
+              size="lg" 
+              className="w-full rounded-xl gap-2 h-12 text-lg font-bold"
+              onClick={() => generateMutation.mutate()}
+            >
+              <Zap className="w-5 h-5 fill-current" /> Start Challenge
+            </Button>
+            <Link href="/quiz">
+              <Button variant="ghost" className="w-full">Cancel</Button>
+            </Link>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+
+  if (isLoading) return (
     <div className="flex flex-col items-center justify-center h-screen space-y-4">
       <RefreshCw className="w-8 h-8 animate-spin text-primary" />
       <p className="text-lg font-medium">AI is crafting your professional puzzle...</p>
     </div>
   );
 
-  if (error || !grid || grid.length === 0) return (
+  if (hasError) return (
     <div className="flex flex-col items-center justify-center h-screen space-y-4 p-4 text-center">
       <div className="p-4 bg-destructive/10 text-destructive rounded-full">
         <ShieldAlert className="w-12 h-12" />
       </div>
       <h2 className="text-2xl font-bold">AI is currently busy</h2>
       <p className="text-muted-foreground max-w-md">We couldn't generate the crossword. Try again in a moment.</p>
-      <Button onClick={handleRetry}>
+      <Button onClick={() => generateMutation.mutate()}>
         Try Again
       </Button>
     </div>
@@ -138,7 +171,7 @@ export default function CrosswordGame() {
               </Button>
             </Link>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleRetry}>
+              <Button variant="outline" size="sm" onClick={() => generateMutation.mutate()}>
                 <RefreshCw className="w-4 h-4 mr-2" /> New Puzzle
               </Button>
             </div>

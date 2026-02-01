@@ -46,6 +46,7 @@ export default function CrosswordGame() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [puzzleLoaded, setPuzzleLoaded] = useState(false);
+  const [hintsUsed, setHintsUsed] = useState(0);
 
   const generateMutation = useMutation({
     mutationFn: async () => {
@@ -106,6 +107,46 @@ export default function CrosswordGame() {
       toast({
         title: "Puzzle Solved!",
         description: "Excellent work! You've earned 50 Z-Points.",
+      });
+    }
+  };
+
+  const revealLetter = () => {
+    if (!selectedCell || isWon) return;
+    
+    const { x, y } = selectedCell;
+    const cell = grid[y][x];
+    
+    if (cell.isBlocked || cell.userChar === cell.char) return;
+    
+    const newGrid = [...grid.map(row => [...row])];
+    newGrid[y][x].userChar = cell.char;
+    setGrid(newGrid);
+    setHintsUsed(prev => prev + 1);
+    
+    toast({
+      title: "Hint Used",
+      description: "The correct letter has been revealed.",
+    });
+
+    // Check win condition after reveal
+    const allCorrect = newGrid.every(row => 
+      row.every(cell => cell.isBlocked || cell.char === cell.userChar)
+    );
+
+    if (allCorrect && !isWon) {
+      setIsWon(true);
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+      // Reduce points if hints were used
+      const points = Math.max(10, 50 - (hintsUsed + 1) * 5);
+      addPointsMutation.mutate(points);
+      toast({
+        title: "Puzzle Solved!",
+        description: `Excellent work! You've earned ${points} Z-Points.`,
       });
     }
   };
@@ -171,6 +212,15 @@ export default function CrosswordGame() {
               </Button>
             </Link>
             <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2 border-yellow-500/50 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
+                onClick={revealLetter}
+                disabled={!selectedCell || isWon}
+              >
+                <Lightbulb className="w-4 h-4" /> Reveal Letter
+              </Button>
               <Button variant="outline" size="sm" onClick={() => generateMutation.mutate()}>
                 <RefreshCw className="w-4 h-4 mr-2" /> New Puzzle
               </Button>

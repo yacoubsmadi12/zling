@@ -528,11 +528,11 @@ export async function registerRoutes(
         if (!data.grid || !data.placements) {
           throw new Error("Invalid puzzle structure");
         }
-        console.log("Crossword generated successfully");
+        console.log("Crossword generated successfully for", department);
         res.json(data);
       } catch (parseError) {
         console.error("JSON Parse Error:", parseError, "Cleaned JSON:", cleanJson);
-        throw new Error("Failed to parse AI response as JSON");
+        throw new Error("AI returned malformed JSON. Please try again.");
       }
     } catch (error) {
       console.error("Crossword Gen Error:", error);

@@ -44,7 +44,7 @@ export default function CrosswordGame() {
   const [selectedCell, setSelectedCell] = useState<{ x: number, y: number } | null>(null);
   const [isWon, setIsWon] = useState(false);
 
-  const { data: puzzleData, isLoading: isAiLoading, error } = useQuery<CrosswordResponse>({
+  const { data: puzzleData, isLoading: isAiLoading, error, refetch } = useQuery<CrosswordResponse>({
     queryKey: ["/api/crossword/generate", user?.department],
     enabled: !!user?.department,
     staleTime: 0,
@@ -62,11 +62,18 @@ export default function CrosswordGame() {
 
   useEffect(() => {
     if (puzzleData && puzzleData.grid) {
-      setGrid(puzzleData.grid);
-      setPlacements(puzzleData.placements || []);
+      console.log("Setting puzzle data:", puzzleData);
+      setGrid([...puzzleData.grid]);
+      setPlacements([...(puzzleData.placements || [])]);
       setIsWon(false);
+      setSelectedCell(null);
     }
   }, [puzzleData]);
+
+  const handleRetry = () => {
+    queryClient.removeQueries({ queryKey: ["/api/crossword/generate"] });
+    refetch();
+  };
 
   const handleCellInput = (x: number, y: number, val: string) => {
     if (isWon) return;
@@ -104,14 +111,14 @@ export default function CrosswordGame() {
     </div>
   );
 
-  if (error) return (
+  if (error || !grid || grid.length === 0) return (
     <div className="flex flex-col items-center justify-center h-screen space-y-4 p-4 text-center">
       <div className="p-4 bg-destructive/10 text-destructive rounded-full">
         <ShieldAlert className="w-12 h-12" />
       </div>
       <h2 className="text-2xl font-bold">AI is currently busy</h2>
       <p className="text-muted-foreground max-w-md">We couldn't generate the crossword. Try again in a moment.</p>
-      <Button onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/crossword/generate"] })}>
+      <Button onClick={handleRetry}>
         Try Again
       </Button>
     </div>
@@ -129,7 +136,7 @@ export default function CrosswordGame() {
               </Button>
             </Link>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/crossword/generate"] })}>
+              <Button variant="outline" size="sm" onClick={handleRetry}>
                 <RefreshCw className="w-4 h-4 mr-2" /> New Puzzle
               </Button>
             </div>

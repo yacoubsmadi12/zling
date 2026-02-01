@@ -475,7 +475,6 @@ export async function registerRoutes(
   });
 
 
-  // --- Crossword Game API ---
   app.get("/api/crossword/generate", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
     try {
@@ -488,30 +487,59 @@ export async function registerRoutes(
       2. Arrange them in a 12x12 grid.
       3. For each word, provide: 'word', 'definition', 'x' (0-11), 'y' (0-11), 'direction' ('across' or 'down'), and 'num' (1-8).
       
-      CRITICAL: The response MUST be a RAW JSON object. DO NOT include markdown formatting like \`\`\`json.
+      CRITICAL: The response MUST be a RAW JSON object ONLY. DO NOT include markdown formatting, DO NOT include \`\`\`json, DO NOT include any text before or after the JSON.
       
-      The response MUST be a JSON object with:
-      - "grid": A 12x12 array where each element is { "char": string, "isBlocked": boolean, "userChar": "", "x": number, "y": number, "acrossNum"?: number, "downNum"?: number }
+      The response MUST be a valid JSON object with:
+      - "grid": A 12x12 array (array of arrays) where each element is { "char": string, "isBlocked": boolean, "userChar": "", "x": number, "y": number, "acrossNum"?: number, "downNum"?: number }
       - "placements": An array of { "word": string, "definition": string, "x": number, "y": number, "direction": "across" | "down", "num": number }
       
       Ensure words intersect correctly in the grid.
-      Format: { "grid": [...], "placements": [...] }`;
+      Example structure: { "grid": [[{...}, ...], ...], "placements": [{...}, ...] }`;
 
       console.log(`Generating crossword for ${department}...`);
       const contentText = await generateContent(prompt);
       
-      // Better JSON cleaning
-      let cleanJson = contentText;
+      if (!contentText) {
+        throw new Error("AI returned empty content");
+      }
+
+      // Robust JSON cleaning
+      let cleanJson = contentText.trim();
+      
+      // Remove potential markdown blocks
       if (cleanJson.includes("```")) {
-        cleanJson = cleanJson.replace(/```json\n?|\n?```/g, "").trim();
+        const matches = cleanJson.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (matches && matches[1]) {
+          cleanJson = matches[1].trim();
+        } else {
+          cleanJson = cleanJson.replace(/```json\n?|\n?```/g, "").trim();
+        }
+      }
+
+      // Handle cases where AI might add text before/after JSON
+      const firstBrace = cleanJson.indexOf('{');
+      const lastBrace = cleanJson.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1) {
+        cleanJson = cleanJson.substring(firstBrace, lastBrace + 1);
       }
       
-      const data = JSON.parse(cleanJson);
-      console.log("Crossword generated successfully");
-      res.json(data);
+      try {
+        const data = JSON.parse(cleanJson);
+        if (!data.grid || !data.placements) {
+          throw new Error("Invalid puzzle structure");
+        }
+        console.log("Crossword generated successfully");
+        res.json(data);
+      } catch (parseError) {
+        console.error("JSON Parse Error:", parseError, "Cleaned JSON:", cleanJson);
+        throw new Error("Failed to parse AI response as JSON");
+      }
     } catch (error) {
       console.error("Crossword Gen Error:", error);
-      res.status(500).json({ message: "Failed to generate crossword", error: String(error) });
+      res.status(500).json({ 
+        message: "AI failed to generate a valid puzzle", 
+        error: error instanceof Error ? error.message : String(error) 
+      });
     }
   });
 

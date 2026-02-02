@@ -173,6 +173,12 @@ export async function registerRoutes(
 
       // Mark the new term as learned for this user
       await storage.markTermAsLearned(user.id, newTerm.id);
+      
+      // Also ensure that we track any other terms presented to the user
+      // if they are switching between departments
+      if (department !== user.department) {
+        console.log(`User ${user.id} from ${user.department} is learning from ${department}`);
+      }
 
       res.json({
         term: newTerm,

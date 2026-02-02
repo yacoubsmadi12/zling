@@ -94,7 +94,17 @@ export default function FlashcardsPage() {
     setCurrentIndex((prev) => (prev - 1 + terms.length) % terms.length);
   };
 
-  const handleFlip = () => setIsFlipped(!isFlipped);
+  const handleFlip = () => {
+    setIsFlipped(!isFlipped);
+    if (!isFlipped && currentTerm) {
+      apiRequest("POST", `/api/user/learned-terms/${currentTerm.id}`, {})
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/user/learned-terms"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        })
+        .catch(err => console.error("Failed to mark term as learned:", err));
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-background pb-20 md:pb-0">

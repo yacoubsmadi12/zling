@@ -323,11 +323,29 @@ export default function LiveBattle() {
               <p className="text-muted-foreground text-lg">Your answers have been submitted</p>
             </motion.div>
 
-            <Card className="text-center p-8">
-              <div className="text-6xl font-black text-primary mb-2">{score}/{questions.length}</div>
-              <div className="text-muted-foreground">Your Score</div>
-              <div className="mt-4 text-sm text-muted-foreground">
-                Waiting for opponent to complete the battle...
+            <Card className="text-center p-8 bg-card/50 backdrop-blur-sm border-2 border-primary/20 shadow-2xl">
+              <div className="relative inline-block mb-4">
+                <div className="text-7xl font-black text-primary drop-shadow-sm">{score}/{questions.length}</div>
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: "100%" }}
+                  className="h-1.5 bg-primary rounded-full mt-2"
+                />
+              </div>
+              <div className="text-xl font-bold text-foreground mb-4">Your Final Score</div>
+              
+              <div className="p-4 rounded-2xl bg-muted/50 border space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-yellow-500" /> Points Earned:
+                  </span>
+                  <span className="font-bold text-green-500">+{score * 10} Z-Points</span>
+                </div>
+                <div className="h-px bg-border" />
+                <div className="text-xs text-muted-foreground italic flex items-center justify-center gap-2">
+                  <Clock className="w-3 h-3" />
+                  Waiting for opponent to complete the battle...
+                </div>
               </div>
             </Card>
 

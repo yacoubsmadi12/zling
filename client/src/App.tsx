@@ -20,6 +20,7 @@ import LiveBattle from "@/pages/LiveBattle";
 import CrosswordGame from "@/pages/CrosswordGame";
 import Leaderboard from "@/pages/Leaderboard";
 import History from "@/pages/History";
+import EmailAssistant from "@/pages/EmailAssistant";
 import Profile from "@/pages/Profile";
 import AdminDashboard from "@/pages/admin-dashboard";
 import NotFound from "@/pages/not-found";
@@ -42,6 +43,7 @@ function Router() {
       <ProtectedRoute path="/crossword" component={CrosswordGame} />
       <ProtectedRoute path="/leaderboard" component={Leaderboard} />
       <ProtectedRoute path="/history" component={History} />
+      <ProtectedRoute path="/email-assistant" component={EmailAssistant} />
       <ProtectedRoute path="/profile" component={Profile} />
       
       <Route component={NotFound} />

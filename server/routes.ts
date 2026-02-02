@@ -585,6 +585,33 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/ai/improve-email", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const { text, style = "professional" } = req.body;
+      if (!text) return res.status(400).send("Text is required");
+
+      const prompt = `You are a professional email writing assistant for a telecom company. 
+      Rewrite the following email draft to improve its style, clarity, and impact.
+      Requested Style: ${style}.
+      
+      Context: The user works at a telecom operator. 
+      If technical, ensure terminology is accurate. 
+      If business, ensure it is professional and persuasive.
+      
+      Original Draft:
+      "${text}"
+      
+      Provide ONLY the rewritten email text. No other text or explanations.`;
+
+      const improvedText = await generateContent(prompt);
+      res.json({ improvedText });
+    } catch (err) {
+      console.error("Email AI Error:", err);
+      res.status(500).send("Failed to improve email style");
+    }
+  });
+
   io.on("connection", (socket) => {
     console.log("New client connected", socket.id);
 

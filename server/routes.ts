@@ -606,9 +606,15 @@ export async function registerRoutes(
 
       const improvedText = await generateContent(prompt);
       res.json({ improvedText });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Email AI Error:", err);
-      res.status(500).send("Failed to improve email style");
+      // Check for rate limit error from Gemini
+      if (err?.status === 429 || (err?.message && err.message.includes("429"))) {
+        return res.status(429).json({ 
+          message: "The AI is currently busy due to high usage. Please try again in a minute." 
+        });
+      }
+      res.status(500).json({ message: "Failed to improve email style" });
     }
   });
 

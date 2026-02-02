@@ -24,10 +24,11 @@ export default function EmailAssistant() {
       const res = await apiRequest("POST", "/api/ai/improve-email", { text: input, style });
       const data = await res.json();
       setOutput(data.improvedText);
-    } catch (err) {
+    } catch (err: any) {
+      const errorMsg = await err.json().catch(() => ({ message: "Failed to improve email style." }));
       toast({
-        title: "Error",
-        description: "Failed to improve email style. Please try again.",
+        title: "Assistant Error",
+        description: errorMsg.message || "Something went wrong. Please try again.",
         variant: "destructive"
       });
     } finally {

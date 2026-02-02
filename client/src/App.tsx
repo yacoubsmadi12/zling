@@ -19,6 +19,7 @@ import DailyMix from "@/pages/DailyMix";
 import LiveBattle from "@/pages/LiveBattle";
 import CrosswordGame from "@/pages/CrosswordGame";
 import Leaderboard from "@/pages/Leaderboard";
+import History from "@/pages/History";
 import Profile from "@/pages/Profile";
 import AdminDashboard from "@/pages/admin-dashboard";
 import NotFound from "@/pages/not-found";
@@ -40,6 +41,7 @@ function Router() {
       <ProtectedRoute path="/live-battle" component={LiveBattle} />
       <ProtectedRoute path="/crossword" component={CrosswordGame} />
       <ProtectedRoute path="/leaderboard" component={Leaderboard} />
+      <ProtectedRoute path="/history" component={History} />
       <ProtectedRoute path="/profile" component={Profile} />
       
       <Route component={NotFound} />

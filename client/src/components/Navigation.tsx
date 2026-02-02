@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, BookOpen, Trophy, User, LogOut, Sword, Shield } from "lucide-react";
+import { Home, BookOpen, Trophy, User, LogOut, Sword, Shield, History as HistoryIcon } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./ThemeToggle";
@@ -13,6 +13,7 @@ export function Navigation() {
     { href: "/learn", icon: BookOpen, label: "Learn" },
     { href: "/quiz", icon: Sword, label: "Battle" },
     { href: "/leaderboard", icon: Trophy, label: "Ranks" },
+    { href: "/history", icon: HistoryIcon, label: "History" },
     { href: "/profile", icon: User, label: "Profile" },
   ];
 

@@ -25,10 +25,25 @@ export default function EmailAssistant() {
       const data = await res.json();
       setOutput(data.improvedText);
     } catch (err: any) {
-      const errorMsg = await err.json().catch(() => ({ message: "Failed to improve email style." }));
+      // apiRequest handles throwing error if response is not ok
+      // and it usually returns a response-like object that has .json()
+      // but if it's already a standard Error, it won't have .json()
+      let message = "Failed to improve email style.";
+      
+      try {
+        if (err.json && typeof err.json === "function") {
+          const errorData = await err.json();
+          message = errorData.message || message;
+        } else if (err.message) {
+          message = err.message;
+        }
+      } catch (e) {
+        console.error("Error parsing error response:", e);
+      }
+
       toast({
         title: "Assistant Error",
-        description: errorMsg.message || "Something went wrong. Please try again.",
+        description: message,
         variant: "destructive"
       });
     } finally {

@@ -89,6 +89,8 @@ async function generateFallbackQuestions(count: number = 10): Promise<any[]> {
   });
 }
 
+import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -98,6 +100,7 @@ export async function registerRoutes(
   // Register AI Integrations routes
   registerImageRoutes(app);
   registerAudioRoutes(app);
+  registerObjectStorageRoutes(app);
 
   // --- AI Daily Content Generation ---
 
@@ -633,7 +636,19 @@ export async function registerRoutes(
     });
   });
 
-  // LDAP Settings
+  app.patch("/api/user/avatar", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    try {
+      const { avatarUrl } = req.body;
+      const user = req.user as User;
+      await db.update(users).set({ avatarUrl }).where(eq(users.id, user.id));
+      res.json({ success: true, avatarUrl });
+    } catch (err) {
+      console.error("Update Avatar Error:", err);
+      res.status(500).json({ message: "Failed to update avatar" });
+    }
+  });
+
   app.get("/api/admin/ldap-settings", async (req, res) => {
     if (!req.isAuthenticated() || (req.user as User).role !== "admin") {
       return res.status(403).send("Forbidden");

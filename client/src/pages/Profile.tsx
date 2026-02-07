@@ -5,17 +5,31 @@ import { Loader } from "@/components/Loader";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge as UIBadge } from "@/components/ui/badge";
-import { Calendar, Mail, Building, Award, Sparkles, Medal, Share2, Shield, ShieldCheck, ShieldPlus } from "lucide-react";
+import { Calendar, Mail, Building, Award, Sparkles, Medal, Share2, Shield, ShieldCheck, ShieldPlus, Upload } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import { useUpload } from "@/hooks/use-upload";
 
 export default function Profile() {
   const { user } = useAuth();
   const { data: userBadgesData, isLoading } = useUserBadges();
   const { data: allBadges } = useQuery({ queryKey: ["/api/badges"] });
   const { toast } = useToast();
+  const { getUploadParameters } = useUpload();
+
+  const updateAvatarMutation = useMutation({
+    mutationFn: async (avatarUrl: string) => {
+      const res = await apiRequest("PATCH", "/api/user/avatar", { avatarUrl });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      toast({ title: "Success", description: "Avatar updated!" });
+    },
+  });
 
   const handleShare = (badgeName: string) => {
     const text = `I just earned the ${badgeName} badge on Zlingo! I'm level ${Math.floor((user?.points || 0) / 1000) + 1} in my telecom learning journey.`;
@@ -63,24 +77,44 @@ export default function Profile() {
             <div className="h-32 bg-gradient-to-r from-primary to-secondary opacity-90" />
             <div className="px-8 pb-8">
               <div className="relative -mt-16 mb-6 flex justify-between items-end">
-                <div className="relative">
-                  <Avatar className="w-32 h-32 border-4 border-card shadow-xl overflow-visible">
-                    <AvatarImage src={user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`} />
-                    <AvatarFallback className="text-4xl">{user.username[0]}</AvatarFallback>
-                  </Avatar>
-                  <Button
-                    size="icon"
-                    variant="secondary"
-                    className="absolute -bottom-2 -right-2 rounded-full shadow-lg h-10 w-10 border-2 border-background"
-                    onClick={() => generateAvatarMutation.mutate()}
-                    disabled={generateAvatarMutation.isPending}
-                  >
-                    {generateAvatarMutation.isPending ? (
-                      <Loader className="w-4 h-4" />
-                    ) : (
-                      <Sparkles className="w-4 h-4" />
-                    )}
-                  </Button>
+                <div className="relative flex gap-4 items-end">
+                  <div className="relative group">
+                    <Avatar className="w-32 h-32 border-4 border-card shadow-xl overflow-visible">
+                      <AvatarImage src={user.avatarUrl?.startsWith("/objects/") ? user.avatarUrl : (user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`)} />
+                      <AvatarFallback className="text-4xl">{user.username[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className="absolute -bottom-2 -right-2 flex gap-2">
+                      <ObjectUploader
+                        onGetUploadParameters={getUploadParameters}
+                        onComplete={(result) => {
+                          const file = result?.successful?.[0];
+                          if (file) {
+                            const objectPath = (file as any).response.body.objectPath;
+                            updateAvatarMutation.mutate(objectPath);
+                          }
+                        }}
+                        buttonClassName="rounded-full shadow-lg h-10 w-10 border-2 border-background p-0 flex items-center justify-center bg-secondary hover:bg-secondary/90"
+                      >
+                        <Upload className="w-4 h-4" />
+                      </ObjectUploader>
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        className="rounded-full shadow-lg h-10 w-10 border-2 border-background"
+                        onClick={() => generateAvatarMutation.mutate()}
+                        disabled={generateAvatarMutation.isPending}
+                      >
+                        {generateAvatarMutation.isPending ? (
+                          <div className="relative w-4 h-4">
+                            <div className="absolute inset-0 rounded-full border-2 border-primary/20"></div>
+                            <div className="absolute inset-0 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
+                          </div>
+                        ) : (
+                          <Sparkles className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
                 <div className="flex gap-2 mb-2">
                   <UIBadge variant="secondary" className="px-3 py-1 text-sm bg-primary/10 text-primary hover:bg-primary/20">
@@ -121,15 +155,20 @@ export default function Profile() {
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <Loader />
-              ) : !userBadgesData || userBadgesData.length === 0 ? (
+                <div className="flex justify-center p-8">
+                  <div className="relative w-16 h-16">
+                    <div className="absolute inset-0 rounded-full border-4 border-primary/20"></div>
+                    <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+                  </div>
+                </div>
+              ) : !userBadgesData || (userBadgesData as any[]).length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   No badges earned yet. Keep playing!
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                  {userBadgesData.map((ub: any) => {
-                    const badge = allBadges?.find((b: any) => b.id === ub.badgeId);
+                  {(userBadgesData as any[]).map((ub: any) => {
+                    const badge = (allBadges as any[])?.find((b: any) => b.id === ub.badgeId);
                     if (!badge) return null;
                     return (
                       <div key={ub.id} className="flex flex-col items-center p-6 bg-card rounded-2xl border border-border hover:shadow-lg transition-all text-center group">

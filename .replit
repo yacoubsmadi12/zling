@@ -48,3 +48,5 @@ expertMode = true
 [userenv]
 
 [userenv.shared]
+PUBLIC_OBJECT_SEARCH_PATHS = "zlingo-public-storage"
+PRIVATE_OBJECT_DIR = "zlingo-private-storage"

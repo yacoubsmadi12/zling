@@ -5,9 +5,8 @@
 @tailwind utilities;
 
 :root {
-  /* Zain-inspired Palette */
-  /* Primary Red: #ED1C24 -> HSL 358 88% 52% */
-  --primary: 358 88% 52%;
+  /* Turquoise Palette */
+  --primary: 180 100% 35%;
   --primary-foreground: 0 0% 100%;
 
   /* Secondary Green: #00A859 -> HSL 152 100% 33% */
@@ -25,15 +24,15 @@
   --muted: 210 20% 96%;
   --muted-foreground: 215 16% 47%;
   
-  --accent: 358 88% 96%; /* Very light red */
-  --accent-foreground: 358 88% 40%;
+  --accent: 180 100% 96%; /* Very light turquoise */
+  --accent-foreground: 180 100% 25%;
   
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 98%;
 
   --border: 220 13% 91%;
   --input: 220 13% 91%;
-  --ring: 358 88% 52%;
+  --ring: 180 100% 35%;
   
   --radius: 1rem;
 
@@ -51,7 +50,7 @@
   --popover: 222 47% 11%;
   --popover-foreground: 210 40% 98%;
   
-  --primary: 358 88% 52%;
+  --primary: 180 100% 35%;
   --primary-foreground: 0 0% 100%;
   
   --secondary: 152 100% 33%;
@@ -68,7 +67,7 @@
   
   --border: 217 33% 17%;
   --input: 217 33% 17%;
-  --ring: 358 88% 52%;
+  --ring: 180 100% 35%;
 }
 
 @layer base {

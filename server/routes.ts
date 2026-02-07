@@ -591,18 +591,20 @@ export async function registerRoutes(
       const { text, style = "professional" } = req.body;
       if (!text) return res.status(400).send("Text is required");
 
-      const prompt = `You are a professional email writing assistant for a telecom company. 
-      Rewrite the following email draft to improve its style, clarity, and impact.
-      Requested Style: ${style}.
+      const prompt = `You are a professional email writing consultant for a telecom company.
+      Your goal is to HELP the user improve their email, not just rewrite it blindly.
       
-      Context: The user works at a telecom operator. 
-      If technical, ensure terminology is accurate. 
-      If business, ensure it is professional and persuasive.
+      Requested Style: ${style}.
+      Context: The user works at a telecom operator.
       
       Original Draft:
       "${text}"
       
-      Provide ONLY the rewritten email text. No other text or explanations.`;
+      Please provide:
+      1. A concise section titled "Suggestions for Improvement" highlighting what was changed and why (max 3 points).
+      2. The "Improved Version" of the email.
+      
+      Keep the tone helpful and coaching-oriented.`;
 
       const improvedText = await generateContent(prompt);
       res.json({ improvedText });

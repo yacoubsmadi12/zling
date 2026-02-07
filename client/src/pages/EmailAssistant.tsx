@@ -134,8 +134,10 @@ export default function EmailAssistant() {
                 </CardHeader>
                 <CardContent>
                   {output ? (
-                    <div className="min-h-[300px] whitespace-pre-wrap text-base leading-relaxed">
-                      {output}
+                    <div className="space-y-6">
+                      <div className="min-h-[200px] whitespace-pre-wrap text-base leading-relaxed p-4 bg-background rounded-lg border">
+                        {output}
+                      </div>
                     </div>
                   ) : (
                     <div className="min-h-[300px] flex flex-col items-center justify-center text-center text-muted-foreground opacity-50 space-y-4">
